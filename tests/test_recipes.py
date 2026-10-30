@@ -21,7 +21,7 @@ from brewberrypi.recipes import (
 
 SPEC_DATA = Path(__file__).parents[1] / "docs" / "specification" / "data"
 PACKAGE_DATA = Path(__file__).parents[1] / "src" / "brewberrypi" / "data"
-SORTED_IDS = ["BENIWEISS", "Dummy", "HANCOCK", "HIPA", "TEST", "WIT", "WaterBoil", "ZORA"]
+SORTED_IDS = ["BENIWEISS", "WaterBoil"]
 MASH_IN = {"goals": [{"type": "MashIn"}]}
 """A recipe file's `mashing_process` with a single goal."""
 
@@ -92,20 +92,23 @@ def test_spec_recipe_files_are_read_with_verbatim_texts() -> None:
     catalogue = load_recipes(configured(SPEC_DATA / "recipes"))
     assert catalogue.source == str(SPEC_DATA / "recipes")
     assert [recipe.id for recipe in catalogue] == SORTED_IDS
-    hipa = catalogue.get("HIPA")
-    assert hipa is not None
-    assert hipa.name == "München 12.6 - SUD4:HIPA"
-    assert hipa.goals[3] == GoalDefinition(
+    beniweiss = catalogue.get("BENIWEISS")
+    assert beniweiss is not None
+    assert beniweiss.name == "München 12.6 - SUD2:BENIWEISS"
+    assert len(beniweiss.goals) == 11
+    assert beniweiss.goals[6] == GoalDefinition(
         type="Rest",
-        temperature=68,
-        minutes=60,
-        name="Verzuckerungsrast",
-        description="Verzuckuerungsrast @68 for 60min",  # legacy typo kept (Q-07)
+        temperature=65,
+        minutes=30,
+        name="Maltoserastr",  # legacy typo kept (Q-07)
+        description="Maltoserastr @65 for 30min",
     )
-    zora = catalogue.get("ZORA")
-    assert zora is not None
-    assert len(zora.goals) == 11
-    assert zora.goals[9] == GoalDefinition(type="IodineTest", temperature=68, minutes=10)  # Q-05
+    assert beniweiss.goals[9] == GoalDefinition(type="IodineTest", temperature=73, minutes=10)
+    water_boil = catalogue.get("WaterBoil")
+    assert water_boil is not None
+    assert water_boil.goals[1] == GoalDefinition(
+        type="CookWater", minutes=20, name="Cooking Water", description="Cooking water for 20min"
+    )
 
 
 def test_Q27_file_name_is_the_id_and_the_list_is_sorted_by_it(tmp_path: Path) -> None:
@@ -167,11 +170,10 @@ def test_AC_084_a_missing_recipe_directory_is_created_with_the_shipped_recipes(t
 def test_AC_084_deleted_recipes_are_not_written_again(tmp_path: Path) -> None:
     directory = tmp_path / "recipes"
     load_recipes(configured(directory))
-    (directory / "ZORA.json").unlink()
-    (directory / "Dummy.json").unlink()
+    (directory / "BENIWEISS.json").unlink()
     catalogue = load_recipes(configured(directory))
-    assert [recipe.id for recipe in catalogue] == ["BENIWEISS", "HANCOCK", "HIPA", "TEST", "WIT", "WaterBoil"]
-    assert not (directory / "ZORA.json").exists()
+    assert [recipe.id for recipe in catalogue] == ["WaterBoil"]
+    assert not (directory / "BENIWEISS.json").exists()
     for file in list(directory.iterdir()):
         file.unlink()
     assert len(load_recipes(configured(directory))) == 0  # an empty directory stays empty
@@ -186,7 +188,7 @@ def test_AC_084_set_group_id_of_the_parent_is_kept(tmp_path: Path) -> None:
 def test_a_staging_directory_left_over_from_an_interrupted_start_is_replaced(tmp_path: Path) -> None:
     staging = tmp_path / ".recipes.new"
     staging.mkdir()
-    (staging / "ZORA.json").write_text("half written")
+    (staging / "BENIWEISS.json").write_text("half written")
     catalogue = load_recipes(configured(tmp_path / "recipes"))
     assert [recipe.id for recipe in catalogue] == SORTED_IDS
     assert not staging.exists()

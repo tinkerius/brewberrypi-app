@@ -43,8 +43,7 @@ These are *not* fixed; they are listed in [../specification/13-open-questions.md
 
 - MashIn / PourInBrewingWater do not control temperature while waiting (Q-03).
 - Boil at 50 % power because of the near-target band at 100 °C target (Q-04).
-- ZORA iodine test at 68 °C after a 70 °C rest (Q-05).
-- Spelling in texts (`successfull`, `Verzuckuerungsrast`, `Maltoserastr`) (Q-07).
+- Spelling in texts (`successfull`, `Maltoserastr`) (Q-07).
 - Chart history since server start, shared, not reset per process (Q-08).
 - Continuous error beeping while the sensor is broken (HW-033).
 - Iodine description grows by one line per "No" answer (GOAL-005).
@@ -58,3 +57,7 @@ service installation / non-root (NFR-023/024), crash-safe outputs (NFR-003),
 button enabling & stop confirmation (UI-042/043), engine state display (UI-011),
 request/response commands with outcomes and changes pushed instead of 500 ms broadcasts (IF-001, IF-052, IF-072, Q-28),
 `resume` command (ENG-016), request ids (DOM-035), recipe details (IF-031), same-origin rule (IF-061, Q-17).
+
+## Legacy data not taken over
+
+Of the 8 legacy recipes only `BENIWEISS` and `WaterBoil` are shipped; the other 6 are removed (`Q-32`, `RCP-002`).

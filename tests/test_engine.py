@@ -10,10 +10,11 @@ from brewberrypi.config import load_config
 from brewberrypi.engine import Engine, EngineState, Reply
 from brewberrypi.goals import Goal
 from brewberrypi.hal.mock import MockHal
-from brewberrypi.recipes import RecipeCatalogue, load_recipes, parse_recipe
+from brewberrypi.recipes import RecipeCatalogue, parse_recipe
+from recipe_fixtures import with_test_recipes
 
 CONFIG = load_config(Path(__file__).parents[1] / "docs" / "specification" / "data" / "config.example.json")
-CATALOGUE = load_recipes(CONFIG.recipes)
+CATALOGUE = with_test_recipes(CONFIG)
 TICK = 0.5
 
 
@@ -68,12 +69,15 @@ def respond_when_asked(engine: Engine, option: str) -> Reply:
 
 def test_AC_030_load_creates_a_loaded_process(engine: Engine) -> None:
     assert state(engine) == "NoProcess"
-    reply = engine.load("ZORA")
-    assert reply == Reply(True, "Process München 12.6 - SUD1:ZORA (ZORA) loaded.")
+    reply = engine.load("BENIWEISS")
+    assert reply == Reply(True, "Process München 12.6 - SUD2:BENIWEISS (BENIWEISS) loaded.")
     assert state(engine) == "Loaded"
     assert statuses(engine) == ["Waiting"] * 11
     assert engine.process is not None
-    assert (engine.process.process_id, engine.process.process_name) == ("ZORA", "München 12.6 - SUD1:ZORA")
+    assert (engine.process.process_id, engine.process.process_name) == (
+        "BENIWEISS",
+        "München 12.6 - SUD2:BENIWEISS",
+    )
 
 
 def test_AC_031_unknown_recipe_or_missing_parameter_is_rejected(engine: Engine) -> None:
@@ -81,22 +85,22 @@ def test_AC_031_unknown_recipe_or_missing_parameter_is_rejected(engine: Engine) 
     assert state(engine) == "NoProcess"
     assert engine.load(None) == Reply(False, "parameter 'recipe' not set.")
     assert engine.load("") == Reply(False, "parameter 'recipe' not set.")
-    engine.load("HIPA")
+    engine.load("WaterBoil")
     assert engine.load("NOPE").success is False
     assert engine.process is not None
-    assert engine.process.process_id == "HIPA"  # state unchanged
+    assert engine.process.process_id == "WaterBoil"  # state unchanged
 
 
 def test_load_replaces_a_loaded_process(engine: Engine) -> None:
-    engine.load("ZORA")
-    assert engine.load("TEST").success
+    engine.load("BENIWEISS")
+    assert engine.load("IODINE").success
     assert engine.process is not None
-    assert engine.process.process_id == "TEST"
+    assert engine.process.process_id == "IODINE"
 
 
 async def test_unload_switches_everything_off(engine: Engine, hal: MockHal) -> None:
     assert engine.unload() == Reply(False, "No process loaded.")
-    engine.load("TEST")
+    engine.load("IODINE")
     hal.switch_on_pump()
     assert engine.unload() == Reply(True, "Process unloaded.")
     assert state(engine) == "NoProcess"
@@ -139,7 +143,7 @@ async def test_ENG_022_first_pursue_happens_immediately(hal: MockHal, clock: Man
 
 def test_AC_034_stop_without_running_is_rejected(engine: Engine) -> None:
     assert engine.stop() == Reply(False, "No process loaded.")
-    engine.load("TEST")
+    engine.load("IODINE")
     assert engine.stop() == Reply(False, "Process is not running.")
     assert state(engine) == "Loaded"
 
@@ -147,7 +151,7 @@ def test_AC_034_stop_without_running_is_rejected(engine: Engine) -> None:
 async def test_AC_035_stop_switches_everything_off_at_once(
     engine: Engine, hal: MockHal, clock: ManualClock
 ) -> None:
-    engine.load("Dummy")
+    engine.load("DEMO")
     engine.start()
     await clock.advance(2)
     assert (hal.get_heating_status(), hal.get_pump_status()) == (1.0, True)
@@ -195,7 +199,7 @@ async def test_AC_036_pause_freezes_the_rest_and_resume_continues(hal: MockHal, 
 
 async def test_pause_rejections(engine: Engine) -> None:
     assert engine.pause() == Reply(False, "No process loaded.")
-    engine.load("TEST")
+    engine.load("IODINE")
     assert engine.pause() == Reply(False, "Process is not running.")
     engine.start()
     engine.pause()
@@ -204,7 +208,7 @@ async def test_pause_rejections(engine: Engine) -> None:
 
 async def test_ENG_016_resume_only_from_paused_and_start_does_not_resume(engine: Engine) -> None:
     assert engine.resume() == Reply(False, "No process loaded.")
-    engine.load("TEST")
+    engine.load("IODINE")
     assert engine.resume() == Reply(False, "Process is not paused.")
     engine.start()
     assert engine.resume() == Reply(False, "Process is not paused.")
@@ -221,7 +225,7 @@ def test_IF_051_rejections_carry_their_error_kind(engine: Engine) -> None:
     assert engine.load(None).error == "invalid"
     assert engine.load("NOPE").error == "not_found"
     assert engine.unload().error == "conflict"
-    assert engine.load("TEST").error is None
+    assert engine.load("IODINE").error is None
 
 
 async def test_ENG_032_start_temperature_survives_pause(hal: MockHal, clock: ManualClock) -> None:
@@ -239,7 +243,7 @@ async def test_ENG_032_start_temperature_survives_pause(hal: MockHal, clock: Man
 
 
 async def test_stop_while_paused(engine: Engine, hal: MockHal, clock: ManualClock) -> None:
-    engine.load("Dummy")
+    engine.load("DEMO")
     engine.start()
     await clock.advance(1)
     engine.pause()
@@ -254,14 +258,14 @@ async def test_stop_while_paused(engine: Engine, hal: MockHal, clock: ManualCloc
 
 async def test_AC_037_reload_creates_fresh_goals(engine: Engine, hal: MockHal, clock: ManualClock) -> None:
     hal.set_temperature(25.0)
-    engine.load("TEST")
+    engine.load("IODINE")
     engine.start()
     await clock.advance(0)
     respond_when_asked(engine, "Yes")
     await clock.advance(TICK)
     assert state(engine) == "Finished"
 
-    engine.load("TEST")
+    engine.load("IODINE")
     assert statuses(engine) == ["Waiting"]
     iodine = engine.process.goals[0] if engine.process else None
     assert iodine is not None
@@ -275,16 +279,16 @@ async def test_AC_037_reload_creates_fresh_goals(engine: Engine, hal: MockHal, c
 async def test_AC_038_load_or_unload_while_running_is_rejected(
     engine: Engine, hal: MockHal, clock: ManualClock
 ) -> None:
-    engine.load("Dummy")
+    engine.load("DEMO")
     engine.start()
     await clock.advance(1)
-    for reply in (engine.load("ZORA"), engine.unload()):
+    for reply in (engine.load("BENIWEISS"), engine.unload()):
         assert reply == Reply(False, "Stop the process first.")
     assert state(engine) == "Running"
     assert engine.process is not None
-    assert engine.process.process_id == "Dummy"
+    assert engine.process.process_id == "DEMO"
     engine.pause()
-    assert engine.load("ZORA") == Reply(False, "Stop the process first.")
+    assert engine.load("BENIWEISS") == Reply(False, "Stop the process first.")
     assert engine.unload() == Reply(False, "Stop the process first.")
     engine.resume()
     await clock.advance(1)
@@ -337,7 +341,7 @@ async def test_AC_050_confirm_completes_the_goal_with_a_short_beep(hal: MockHal,
 async def test_AC_051_invalid_answer_is_rejected_and_the_request_stays(
     engine: Engine, clock: ManualClock
 ) -> None:
-    engine.load("TEST")
+    engine.load("IODINE")
     engine.start()
     await clock.advance(0)
     assert engine.respond("yes") == Reply(False, "Response option 'yes' is not valid.")
@@ -350,7 +354,7 @@ async def test_AC_058_an_answer_naming_an_earlier_request_is_rejected(
     engine: Engine, hal: MockHal, clock: ManualClock
 ) -> None:
     hal.set_temperature(25.0)
-    engine.load("TEST")
+    engine.load("IODINE")
     engine.start()
     await clock.advance(0)
     first = active(engine).active_request
@@ -372,7 +376,7 @@ async def test_AC_052_respond_without_an_active_request_is_rejected(
     engine: Engine, clock: ManualClock
 ) -> None:
     assert engine.respond("Confirm") == Reply(False, "There is no active request to respond to.")
-    engine.load("Dummy")
+    engine.load("DEMO")
     assert engine.respond("Confirm") == Reply(False, "There is no active request to respond to.")
     engine.start()
     await clock.advance(0)
@@ -383,7 +387,7 @@ async def test_AC_053_test_recipe_iodine_no_then_yes_finishes(
     engine: Engine, hal: MockHal, clock: ManualClock
 ) -> None:
     hal.set_temperature(25.0)
-    engine.load("TEST")
+    engine.load("IODINE")
     engine.start()
     await clock.advance(0)
     assert respond_when_asked(engine, "No").success
@@ -405,7 +409,7 @@ async def test_AC_053_test_recipe_iodine_no_then_yes_finishes(
 async def test_AC_057_no_reminders_after_stop_pause_or_unload(
     engine: Engine, hal: MockHal, clock: ManualClock
 ) -> None:
-    engine.load("TEST")
+    engine.load("IODINE")
     engine.start()
     await clock.advance(15)
     assert hal.beeps() == ["long_beep"] * 2
@@ -432,7 +436,7 @@ async def test_respond_while_paused_is_accepted_without_reminders(
     engine: Engine, hal: MockHal, clock: ManualClock
 ) -> None:
     hal.set_temperature(25.0)
-    engine.load("TEST")
+    engine.load("IODINE")
     engine.start()
     await clock.advance(0)
     engine.pause()
@@ -476,7 +480,7 @@ async def test_ENG_023_failing_goal_switches_the_heater_off_and_is_retried(
 async def test_shutdown_ends_the_loop_and_switches_everything_off(
     engine: Engine, hal: MockHal, clock: ManualClock
 ) -> None:
-    engine.load("Dummy")
+    engine.load("DEMO")
     engine.start()
     await clock.advance(1)
     await engine.shutdown()
