@@ -38,7 +38,7 @@ All first-party files were read completely during recovery (2026-09-24).
 | `src/com/brewberrypi/tools/TemperatureLoggerStart.java` | CSV temperature logger | TOOL-001 |
 | `test/GPIOTest.java` | GPIO smoke test (main program) | TOOL-002 |
 | `test/TemperatureSensorTest.java` | Sensor print loop (main program) | TOOL-003 |
-| `test/com/brewberrypi/mash/MashEngineTest.java` | Endless simulation run of fixture recipe | 07 §7.4, AC-09x |
+| `test/com/brewberrypi/mash/MashEngineTest.java` | Endless simulation run of fixture recipe | 07 §7.5, AC-09x |
 | `test/com/brewberrypi/hardware/raspberrypi/RaspberryPiHardswareControllerTest.java` | Endless temperature print | TOOL-003 |
 | `src/webcontent/index.html` | Single page UI, CometD client wiring, button handlers, info modal | 09, 08 |
 | `src/webcontent/js/angularjs/brewberrypi.angularjs-controllers.js` | AngularJS controllers, chart options, demo data, model update functions | 09 |

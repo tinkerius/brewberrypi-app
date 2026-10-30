@@ -1,11 +1,12 @@
 """Recipe catalogue: loading and validation (RCP-001..005, spec 07).
 
 Recipes live in a directory, one file per recipe: `<id>.json` holds the recipe with that id, in the format
-`data/recipe.schema.json`. Recipes are only ever read from that directory. When it does not exist, the
-application creates it with the legacy catalogue shipped as `data/recipes/` (identical to
-`docs/specification/data/recipes/`, RCP-002); a recipe the brewer deletes later is not written again (Q-29).
-An invalid recipe file is logged and skipped; the other recipes are loaded (RCP-003). A directory that cannot
-be created or read raises `RecipeDirectoryError` (startup exit code 3).
+`data/recipe.schema.json`; its goals are in the section `mashing_process` (spec 7.2, Q-31). Recipes are only
+ever read from that directory. When it does not exist, the application creates it with the legacy catalogue
+shipped as `data/recipes/` (identical to `docs/specification/data/recipes/`, RCP-002); a recipe the brewer
+deletes later is not written again (Q-29). An invalid recipe file is logged and skipped; the other recipes are
+loaded (RCP-003); a file in the old format, with `goals` at the top level, is invalid too (Q-31). A directory
+that cannot be created or read raises `RecipeDirectoryError` (startup exit code 3).
 
 `RecipeLibrary` reads the directory again whenever its files change (RCP-006).
 """
@@ -54,7 +55,7 @@ class RecipeDirectoryError(Exception):
 
 @dataclass(frozen=True)
 class GoalDefinition:
-    """One step of a recipe as written in the recipe file (spec 7.2)."""
+    """One step of a recipe as written in the recipe file (spec 7.3)."""
 
     type: GoalType
     temperature: float | None = None
@@ -242,13 +243,15 @@ def parse_recipe(recipe_id: str, text: str, source: str) -> Recipe:
     except json.JSONDecodeError as error:
         raise RecipeError(f"{source}:{error.lineno}:{error.colno}: invalid JSON: {error.msg}") from None
     recipe = repr(recipe_id)
+    if isinstance(raw, dict) and "goals" in raw and "mashing_process" not in raw:  # recipe format before Q-31
+        raise RecipeError(f"{source}: recipe {recipe}: old recipe format: move goals into mashing_process")
     try:
         _validate(raw)
     except fastjsonschema.JsonSchemaValueException as error:
         raise RecipeError(f"{source}: {_describe(raw, recipe, error.message, error.name)}") from None
 
     goals = []
-    for goal_index, raw_goal in enumerate(raw["goals"]):
+    for goal_index, raw_goal in enumerate(raw["mashing_process"]["goals"]):
         # The schema's dependentRequired (draft 2019-09) is not evaluated by fastjsonschema.
         if raw_goal["type"] == "Rest" and ("name" in raw_goal) != ("description" in raw_goal):
             where = _goal_location(recipe, goal_index, raw_goal)
@@ -258,13 +261,13 @@ def parse_recipe(recipe_id: str, text: str, source: str) -> Recipe:
 
 
 def _goal_location(recipe: str, goal_index: int, raw_goal: Any) -> str:
-    """`recipe 'ZORA', goal 5 (index 4, Rest)`: goals numbered from 1 as in spec 7.3, plus the JSON index."""
+    """`recipe 'ZORA', goal 5 (index 4, Rest)`: goals numbered from 1 as in spec 7.4, plus the JSON index."""
     goal_type = raw_goal.get("type") if isinstance(raw_goal, dict) else None
     kind = f", {goal_type}" if isinstance(goal_type, str) else ""
     return f"recipe {recipe}, goal {goal_index + 1} (index {goal_index}{kind})"
 
 
-_GOAL_PATH = re.compile(r"^data\.goals\[(\d+)\]")
+_GOAL_PATH = re.compile(r"^data\.mashing_process\.goals\[(\d+)\]")
 
 
 def _describe(raw: Any, recipe: str, message: str, name: str) -> str:
@@ -277,7 +280,8 @@ def _describe(raw: Any, recipe: str, message: str, name: str) -> str:
     goal_index = int(match.group(1))
     rest = name[match.end() :].removeprefix(".")
     field = f"{rest} " if rest else ""
-    return f"{_goal_location(recipe, goal_index, raw['goals'][goal_index])}: {field}{problem}"
+    raw_goal = raw["mashing_process"]["goals"][goal_index]
+    return f"{_goal_location(recipe, goal_index, raw_goal)}: {field}{problem}"
 
 
 _BUILT_IN_DIRECTORY = files("brewberrypi").joinpath("data/recipes")

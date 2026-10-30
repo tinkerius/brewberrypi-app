@@ -73,9 +73,11 @@ def test_AC_081_invalid_recipe_file_is_skipped_and_logged(
 ) -> None:
     (tmp_path / "recipes").mkdir()
     (tmp_path / "recipes" / "R.json").write_text(
-        json.dumps({"name": "r", "goals": [{"type": "Rest", "temperature": 62}]})
+        json.dumps({"name": "r", "mashing_process": {"goals": [{"type": "Rest", "temperature": 62}]}})
     )
-    (tmp_path / "recipes" / "S.json").write_text(json.dumps({"name": "s", "goals": [{"type": "MashIn"}]}))
+    (tmp_path / "recipes" / "S.json").write_text(
+        json.dumps({"name": "s", "mashing_process": {"goals": [{"type": "MashIn"}]}})
+    )
     assert main(["--dummymode"]) == EXIT_OK
     output = capsys.readouterr().out
     assert "ERROR brewberrypi.recipes: invalid recipe file, recipe skipped:" in output

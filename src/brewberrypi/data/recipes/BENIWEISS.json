@@ -1,17 +1,19 @@
 {
   "$schema": "../recipe.schema.json",
   "name": "München 12.6 - SUD2:BENIWEISS",
-  "goals": [
-    { "type": "PourInBrewingWater" },
-    { "type": "HeatUp", "temperature": 40 },
-    { "type": "MashIn" },
-    { "type": "HeatUp", "temperature": 52 },
-    { "type": "Rest", "temperature": 52, "minutes": 30, "name": "Eiweißrast", "description": "Eiweißrast @52 for 30min" },
-    { "type": "HeatUp", "temperature": 65 },
-    { "type": "Rest", "temperature": 65, "minutes": 30, "name": "Maltoserastr", "description": "Maltoserastr @65 for 30min" },
-    { "type": "HeatUp", "temperature": 73 },
-    { "type": "Rest", "temperature": 73, "minutes": 40, "name": "Verzuckerungsrast", "description": "Verzuckerungsrast @73 for 40min" },
-    { "type": "IodineTest", "temperature": 73, "minutes": 10 },
-    { "type": "HeatUp", "temperature": 78 }
-  ]
+  "mashing_process": {
+    "goals": [
+      { "type": "PourInBrewingWater" },
+      { "type": "HeatUp", "temperature": 40 },
+      { "type": "MashIn" },
+      { "type": "HeatUp", "temperature": 52 },
+      { "type": "Rest", "temperature": 52, "minutes": 30, "name": "Eiweißrast", "description": "Eiweißrast @52 for 30min" },
+      { "type": "HeatUp", "temperature": 65 },
+      { "type": "Rest", "temperature": 65, "minutes": 30, "name": "Maltoserastr", "description": "Maltoserastr @65 for 30min" },
+      { "type": "HeatUp", "temperature": 73 },
+      { "type": "Rest", "temperature": 73, "minutes": 40, "name": "Verzuckerungsrast", "description": "Verzuckerungsrast @73 for 40min" },
+      { "type": "IodineTest", "temperature": 73, "minutes": 10 },
+      { "type": "HeatUp", "temperature": 78 }
+    ]
+  }
 }

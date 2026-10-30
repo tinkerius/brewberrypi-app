@@ -573,7 +573,7 @@ async def test_AC_085_a_new_recipe_file_reaches_every_client_and_a_loaded_proces
 ) -> None:
     directory = tmp_path / "recipes"
     directory.mkdir()
-    recipe = {"name": "Hold 30 °C", "goals": [{"type": "HeatUp", "temperature": 30}]}
+    recipe = {"name": "Hold 30 °C", "mashing_process": {"goals": [{"type": "HeatUp", "temperature": 30}]}}
     (directory / "HOLD30.json").write_text(json.dumps(recipe))
     library = RecipeLibrary.open(dataclasses.replace(CONFIG.recipes, directory=directory))
     event_clock = ManualClock()
@@ -583,7 +583,9 @@ async def test_AC_085_a_new_recipe_file_reaches_every_client_and_a_loaded_proces
         await event_clock.advance(0)
         assert (await call(app, "PUT", "/api/process", {"recipe": "HOLD30"}))[0] == 200
 
-        (directory / "WATER.json").write_text(json.dumps({"name": "Water", "goals": [{"type": "MashIn"}]}))
+        (directory / "WATER.json").write_text(
+            json.dumps({"name": "Water", "mashing_process": {"goals": [{"type": "MashIn"}]}})
+        )
         (directory / "HOLD30.json").write_text(json.dumps({**recipe, "name": "Hold at 30 °C, renamed"}))
         await event_clock.advance(CONFIG.recipes.check_milliseconds / 1000)
         expected = [{"id": "HOLD30", "name": "Hold at 30 °C, renamed"}, {"id": "WATER", "name": "Water"}]
