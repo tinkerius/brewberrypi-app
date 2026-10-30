@@ -31,10 +31,10 @@
 ## 7.3 Goal definition format
 
 ```json
-{ "type": "HeatUp", "temperature": 62 }
-{ "type": "Rest", "temperature": 62, "minutes": 30,
-  "name": "Verzuckerungsrast", "description": "Verzuckerungsrast @62 for 30min" }
-{ "type": "IodineTest", "temperature": 62, "minutes": 10 }
+{ "type": "HeatUp", "temperature": 73 }
+{ "type": "Rest", "temperature": 73, "minutes": 40,
+  "name": "Verzuckerungsrast", "description": "Verzuckerungsrast @73 for 40min" }
+{ "type": "IodineTest", "temperature": 73, "minutes": 10 }
 { "type": "CookWater", "name": "Cooking Water", "description": "Cooking water for 20min", "minutes": 20 }
 { "type": "PourInBrewingWater" } { "type": "MashIn" } { "type": "Lautering" } { "type": "HeatUpForHopsCooking" }
 ```
