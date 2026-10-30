@@ -15,7 +15,7 @@ from brewberrypi.config import SimulationConfig, load_config
 from brewberrypi.engine import Engine
 from brewberrypi.hal import LONG_BEEP, SHORT_BEEP, round_temperature, sound
 from brewberrypi.hal.simulation import SimulationHal
-from brewberrypi.recipes import load_recipes
+from recipe_fixtures import with_test_recipes
 
 CONFIG = load_config(Path(__file__).parents[1] / "docs" / "specification" / "data" / "config.example.json")
 SIMULATION = CONFIG.simulation
@@ -216,15 +216,15 @@ async def test_HW_064_simulation_physics_follows_the_scaled_clock() -> None:
 # --- end to end in simulation (AC-090) ---
 
 
-async def test_AC_090_dummy_recipe_runs_to_finished_in_simulation() -> None:
-    """The Dummy recipe with simulated physics and accelerated (manual) time.
+async def test_AC_090_demo_recipe_runs_to_finished_in_simulation() -> None:
+    """The test recipe DEMO with simulated physics and accelerated (manual) time.
 
     The chart (M7) will plot the temperature broadcast every second; this test samples the same values.
     """
     clock = ManualClock()
     hal = SimulationHal(clock, SIMULATION)
-    engine = Engine(hal, clock, load_recipes(CONFIG.recipes), CONFIG)
-    assert engine.load("Dummy").success
+    engine = Engine(hal, clock, with_test_recipes(CONFIG), CONFIG)
+    assert engine.load("DEMO").success
     assert engine.start().success
     assert engine.process is not None
     goals = engine.process.goals

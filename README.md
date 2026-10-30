@@ -116,8 +116,8 @@ whole application, e.g. `60` runs a 10-minute rest in 10 seconds. Beeps play on 
 if `paplay`, `aplay`, `afplay` or Windows sound is available, otherwise they are only logged.
 
 The recipes come from the directory `recipes/` next to the configuration file (`recipes.directory`), one file per
-recipe: `recipes/ZORA.json` holds the recipe `ZORA`, and the file name is the recipe id. The UI lists the recipes
-sorted by id. If the directory does not exist, the application creates it with the 8 legacy recipes
+recipe: `recipes/BENIWEISS.json` holds the recipe `BENIWEISS`, and the file name is the recipe id. The UI lists the recipes
+sorted by id. If the directory does not exist, the application creates it with the 2 shipped recipes
 ([docs/specification/data/recipes/](docs/specification/data/recipes/)); recipes you delete there are not written
 again. A recipe file you add, change or remove shows up in every open UI within a second
 (`recipes.checkMilliseconds`), without a restart; a loaded process keeps its recipe. An invalid recipe file is
@@ -155,7 +155,7 @@ The server serves the web UI, a REST API and an event stream on one port (`serve
 
   ```sh
   curl http://brewberrypi.local:8080/api/process
-  curl -X PUT http://brewberrypi.local:8080/api/process -H 'Content-Type: application/json' -d '{"recipe": "Dummy"}'
+  curl -X PUT http://brewberrypi.local:8080/api/process -H 'Content-Type: application/json' -d '{"recipe": "WaterBoil"}'
   curl -X POST http://brewberrypi.local:8080/api/process/start -H 'Content-Type: application/json' -d '{}'
   ```
 

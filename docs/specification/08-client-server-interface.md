@@ -61,8 +61,8 @@ Process loaded:
 
 ```json
 {
-  "processid": "ZORA",
-  "processname": "München 12.6 - SUD1:ZORA",
+  "processid": "BENIWEISS",
+  "processname": "München 12.6 - SUD2:BENIWEISS",
   "state": "Running",
   "goals": [
     { "name": "Add Water", "description": "Pour in the brewing water.",
@@ -89,7 +89,7 @@ A goal with an active request additionally contains:
 ### `IF-030` RecipeList
 
 ```json
-[ { "id": "ZORA", "name": "München 12.6 - SUD1:ZORA" }, { "id": "HANCOCK", "name": "München 12.6 - SUD3:HANCOCK" } ]
+[ { "id": "BENIWEISS", "name": "München 12.6 - SUD2:BENIWEISS" }, { "id": "WaterBoil", "name": "Water Boiling" } ]
 ```
 
 Order = catalogue order (`DOM-002`, `RCP-002`).
@@ -143,7 +143,7 @@ Settings of the web UI from the configuration (`Q-30`), read by the UI on every 
 Every command gets exactly one reply, sent only to the issuing client:
 
 ```json
-{ "command": "load", "success": true, "message": "Process München 12.6 - SUD1:ZORA (ZORA) loaded." }
+{ "command": "load", "success": true, "message": "Process München 12.6 - SUD2:BENIWEISS (BENIWEISS) loaded." }
 ```
 
 - Legacy only answered `load` (on a topic the UI did not listen to), and the UI listened for replies of unload/start/pause/stop that were never sent — so no feedback was ever shown.

@@ -261,7 +261,8 @@ def parse_recipe(recipe_id: str, text: str, source: str) -> Recipe:
 
 
 def _goal_location(recipe: str, goal_index: int, raw_goal: Any) -> str:
-    """`recipe 'ZORA', goal 5 (index 4, Rest)`: goals numbered from 1 as in spec 7.4, plus the JSON index."""
+    """`recipe 'BENIWEISS', goal 5 (index 4, Rest)`: goals numbered from 1 as in spec 7.4, plus the JSON
+    index."""
     goal_type = raw_goal.get("type") if isinstance(raw_goal, dict) else None
     kind = f", {goal_type}" if isinstance(goal_type, str) else ""
     return f"recipe {recipe}, goal {goal_index + 1} (index {goal_index}{kind})"

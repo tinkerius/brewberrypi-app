@@ -17,7 +17,7 @@ from brewberrypi.clock import ManualClock
 from brewberrypi.config import load_config
 from brewberrypi.engine import Engine
 from brewberrypi.hal.mock import MockHal
-from brewberrypi.recipes import RecipeLibrary, load_recipes
+from brewberrypi.recipes import RecipeLibrary
 from brewberrypi.web.app import create_app
 from brewberrypi.web.events import MAX_BACKLOG, EventHub, Subscriber, frame
 from brewberrypi.web.messages import (
@@ -28,9 +28,10 @@ from brewberrypi.web.messages import (
     run_command,
     validator,
 )
+from recipe_fixtures import with_test_recipes
 
 CONFIG = load_config(Path(__file__).parents[1] / "docs" / "specification" / "data" / "config.example.json")
-CATALOGUE = load_recipes(CONFIG.recipes)
+CATALOGUE = with_test_recipes(CONFIG)
 HARDWARE_STATUS = validator("HardwareStatus")
 PROCESS_STATE = validator("ProcessState")
 RECIPE_LIST = validator("RecipeList")
@@ -89,12 +90,12 @@ async def test_IF_020_process_state_with_goals_and_active_request(
     engine: Engine, hal: MockHal, clock: ManualClock
 ) -> None:
     hal.set_temperature(25.0)
-    engine.load("TEST")
+    engine.load("IODINE")
     state = process_state(engine)
     PROCESS_STATE(state)
     assert state == {
-        "processid": "TEST",
-        "processname": "Test Process",
+        "processid": "IODINE",
+        "processname": "Iodine Test",
         "state": "Loaded",
         "goals": [
             {
@@ -123,16 +124,7 @@ async def test_IF_020_process_state_with_goals_and_active_request(
 def test_IF_030_recipe_list_in_catalogue_order() -> None:
     recipes = recipe_list(CATALOGUE)
     RECIPE_LIST(recipes)
-    assert [r["id"] for r in recipes] == [
-        "BENIWEISS",
-        "Dummy",
-        "HANCOCK",
-        "HIPA",
-        "TEST",
-        "WIT",
-        "WaterBoil",
-        "ZORA",
-    ]
+    assert [r["id"] for r in recipes] == ["BENIWEISS", "DEMO", "IODINE", "WaterBoil"]
 
 
 def test_IF_031_recipe_detail_has_the_goals_as_in_the_recipe_file() -> None:
@@ -161,12 +153,12 @@ def test_IF_031_recipe_detail_has_the_goals_as_in_the_recipe_file() -> None:
 @pytest.mark.parametrize(
     ("command", "body", "status", "message"),
     [
-        ("load", {"recipe": "ZORA"}, 200, "Process München 12.6 - SUD1:ZORA (ZORA) loaded."),
+        ("load", {"recipe": "BENIWEISS"}, 200, "Process München 12.6 - SUD2:BENIWEISS (BENIWEISS) loaded."),
         ("load", {}, 422, "parameter 'recipe' not set."),
         ("load", None, 422, "parameter 'recipe' not set."),
         ("load", {"recipe": "NOPE"}, 404, "Unknown recipe 'NOPE'."),
         ("load", {"recipe": 7}, 422, "Invalid load command: recipe must be string"),
-        ("load", "ZORA", 422, "Invalid load command: must be object"),
+        ("load", "BENIWEISS", 422, "Invalid load command: must be object"),
         ("start", {}, 409, "No process loaded."),
         ("start", {"now": True}, 422, "Invalid start command: must not contain {'now'} properties"),
         ("unload", None, 409, "No process loaded."),
@@ -189,7 +181,7 @@ async def test_AC_078_an_answer_that_is_no_option_is_invalid(
     engine: Engine, hal: MockHal, clock: ManualClock
 ) -> None:
     hal.set_temperature(25.0)
-    engine.load("TEST")
+    engine.load("IODINE")
     engine.start()
     await clock.advance(0)
     assert run_command(engine, "respond", {"response": "confirm"}) == (
@@ -362,7 +354,7 @@ def test_rest_reads(hal: MockHal, clock: ManualClock) -> None:
         HARDWARE_STATUS(http.get("/api/hardware").json())
         assert http.get("/api/process").json() == {"state": "NoProcess"}
         RECIPE_LIST(http.get("/api/recipes").json())
-        RECIPE_DETAIL(http.get("/api/recipes/ZORA").json())
+        RECIPE_DETAIL(http.get("/api/recipes/BENIWEISS").json())
         missing = http.get("/api/recipes/NOPE")
         assert missing.status_code == 404
         ERROR_REPLY(missing.json())
@@ -390,10 +382,10 @@ def test_IF_042_chart_since_returns_only_newer_points(hal: MockHal, clock: Manua
 
 def test_IF_053_commands_over_rest(hal: MockHal, clock: ManualClock) -> None:
     with TestClient(create_app(CONFIG, CATALOGUE, hal, clock)) as http:
-        loaded = http.put("/api/process", json={"recipe": "Dummy"})
+        loaded = http.put("/api/process", json={"recipe": "DEMO"})
         assert (loaded.status_code, loaded.json()) == (
             200,
-            {"command": "load", "success": True, "message": "Process My Dummy Process (Dummy) loaded."},
+            {"command": "load", "success": True, "message": "Process Demo Process (DEMO) loaded."},
         )
         assert http.post("/api/process/start", json={}).json()["message"] == "Process started."
         twice = http.post("/api/process/start", json={})
@@ -423,7 +415,7 @@ async def test_AC_058_an_answer_names_its_request(hal: MockHal, clock: ManualClo
     app = create_app(CONFIG, CATALOGUE, hal, clock)
     async with app.router.lifespan_context(app):
         engine: Engine = app.state.engine
-        engine.load("TEST")
+        engine.load("IODINE")
         engine.start()
         await clock.advance(0)
         request_id = process_state(engine)["goals"][0]["activeRequest"]["id"]
@@ -549,11 +541,11 @@ async def test_AC_070_event_stream_snapshot_then_the_effect_of_a_command(
         assert name == "snapshot"
         SNAPSHOT(snapshot)
 
-        status, _ = await call(app, "PUT", "/api/process", {"recipe": "Dummy"})
+        status, _ = await call(app, "PUT", "/api/process", {"recipe": "DEMO"})
         assert status == 200
         await event_clock.advance(0)  # pushed with the command, before the next check
         process = [data for name, data in stream.events() if name == "process"]
-        assert process[-1]["processid"] == "Dummy"
+        assert process[-1]["processid"] == "DEMO"
         PROCESS_STATE(process[-1])
 
         hal.set_temperature(21.0)

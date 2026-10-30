@@ -73,7 +73,7 @@ describe("UI-042 command acceptance matrix", () => {
 const SNAPSHOT: Snapshot = {
   hardware: { temperature: 20, pumpstatus: false, heatingstatus: 0 },
   process: { state: "NoProcess" },
-  recipes: [{ id: "ZORA", name: "München 12.6 - SUD1:ZORA" }],
+  recipes: [{ id: "BENIWEISS", name: "München 12.6 - SUD2:BENIWEISS" }],
   chart: [{ key: "Kettle Temperature", values: [{ x: 1000, y: 20 }, { x: 2000, y: 20.1 }] }],
   heartbeatMilliseconds: 5000,
 };
@@ -85,7 +85,7 @@ describe("state", () => {
     expect(state.process).toEqual({ state: "NoProcess" });
     expect(state.recipes).toHaveLength(1);
     state = receive(state, "hardware", { temperature: 21, pumpstatus: true, heatingstatus: 1 });
-    state = receive(state, "process", { processid: "ZORA", processname: "München 12.6 - SUD1:ZORA", state: "Loaded", goals: [] });
+    state = receive(state, "process", { processid: "BENIWEISS", processname: "München 12.6 - SUD2:BENIWEISS", state: "Loaded", goals: [] });
     state = receive(state, "ping", {});
     expect(state.hardware?.temperature).toBe(21);
     expect(state.process?.state).toBe("Loaded");
@@ -158,7 +158,7 @@ describe("UI-001 app version", () => {
 
 describe("IF-053 commands over REST", () => {
   it("maps every command to its HTTP request", () => {
-    expect(commandRequest("load", { recipe: "ZORA" })).toEqual({ method: "PUT", path: "/api/process", body: { recipe: "ZORA" } });
+    expect(commandRequest("load", { recipe: "BENIWEISS" })).toEqual({ method: "PUT", path: "/api/process", body: { recipe: "BENIWEISS" } });
     expect(commandRequest("unload")).toEqual({ method: "DELETE", path: "/api/process", body: {} });
     for (const command of ["start", "pause", "resume", "stop"] as const) {
       expect(commandRequest(command)).toEqual({ method: "POST", path: `/api/process/${command}`, body: {} });

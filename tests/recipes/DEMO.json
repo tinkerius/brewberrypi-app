@@ -1,6 +1,6 @@
 {
-  "$schema": "../recipe.schema.json",
-  "name": "My Dummy Process",
+  "$schema": "../../docs/specification/data/recipe.schema.json",
+  "name": "Demo Process",
   "mashing_process": {
     "goals": [
       { "type": "HeatUp", "temperature": 62 },
