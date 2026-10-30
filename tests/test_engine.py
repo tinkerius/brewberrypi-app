@@ -36,7 +36,7 @@ async def engine(hal: MockHal, clock: ManualClock) -> AsyncIterator[Engine]:
 
 def engine_with(hal: MockHal, clock: ManualClock, goals: str) -> Engine:
     """An engine whose only recipe `R` has the given goals (JSON list)."""
-    recipe = parse_recipe("R", f'{{"name": "Recipe", "goals": {goals}}}', "test")
+    recipe = parse_recipe("R", f'{{"name": "Recipe", "mashing_process": {{"goals": {goals}}}}}', "test")
     catalogue = RecipeCatalogue(recipes=(recipe,), source="test")
     return Engine(hal, clock, catalogue, CONFIG)
 

@@ -2,14 +2,33 @@
 
 ## 7.1 Recipe catalogue
 
-- `RCP-001` Recipes are read only from a **recipe directory** with **one file per recipe** (`Q-27`): the file `<id>.json` holds the recipe with that `id`, so the file name is the recipe id (letters, digits, `_` and `-`) and the file itself has no `id`. The directory is `recipes` by default, configurable with `recipes.directory`, relative to the configuration file's directory (`Q-19`). Only files ending in `.json` are read; hidden files (name starting with `.`), other files and subdirectories are ignored. If the recipe directory does not exist, the application creates it and writes the shipped recipes (`RCP-002`) into it, one file each, so a first start already offers recipes; a recipe file the brewer deletes later is not written again (`Q-29`). If the recipe directory cannot be created or read, the application refuses to start. Format of one file: [data/recipe.schema.json](data/recipe.schema.json). `[NEW]` (legacy: recipes hard-coded in source code)
-- `RCP-002` The shipped recipes MUST be exactly the 8 legacy recipes of [data/recipes/](data/recipes/), one file each. The recipe list is sorted by recipe id in character-code order (upper case before lower case): `BENIWEISS`, `Dummy`, `HANCOCK`, `HIPA`, `TEST`, `WIT`, `WaterBoil`, `ZORA` (`Q-27`; legacy: the order of §7.3).
-- `RCP-003` Invalid recipe file (syntax, schema, unknown goal type, missing parameter, file name that is not a valid id, unreadable file) → the application logs a precise error (file, recipe id, goal index) and **skips that recipe**; all other recipes are loaded (`Q-27`). A recipe directory without valid recipes gives an empty recipe list.
+- `RCP-001` Recipes are read only from a **recipe directory** with **one file per recipe** (`Q-27`): the file `<id>.json` holds the recipe with that `id`, so the file name is the recipe id (letters, digits, `_` and `-`) and the file itself has no `id`. The directory is `recipes` by default, configurable with `recipes.directory`, relative to the configuration file's directory (`Q-19`). Only files ending in `.json` are read; hidden files (name starting with `.`), other files and subdirectories are ignored. If the recipe directory does not exist, the application creates it and writes the shipped recipes (`RCP-002`) into it, one file each, so a first start already offers recipes; a recipe file the brewer deletes later is not written again (`Q-29`). If the recipe directory cannot be created or read, the application refuses to start. Format of one file: §7.2 and [data/recipe.schema.json](data/recipe.schema.json). `[NEW]` (legacy: recipes hard-coded in source code)
+- `RCP-002` The shipped recipes MUST be exactly the 8 legacy recipes of [data/recipes/](data/recipes/), one file each. The recipe list is sorted by recipe id in character-code order (upper case before lower case): `BENIWEISS`, `Dummy`, `HANCOCK`, `HIPA`, `TEST`, `WIT`, `WaterBoil`, `ZORA` (`Q-27`; legacy: the order of §7.4).
+- `RCP-003` Invalid recipe file (syntax, schema, unknown goal type, missing parameter, file name that is not a valid id, unreadable file, old format with `goals` at the top level — see §7.2) → the application logs a precise error (file, recipe id, goal index) and **skips that recipe**; all other recipes are loaded (`Q-27`). A recipe directory without valid recipes gives an empty recipe list.
 - `RCP-004` The catalogue is read-only at runtime (no recipe editing in the UI; see `Q-09`).
 - `RCP-005` The list of recipes (`id`, `name`) is published to clients (`IF-030`).
 - `RCP-006` `[NEW]` While it runs, the application checks the recipe directory every `recipes.checkMilliseconds` (default 1000) and reads it again when a recipe file was added, changed or removed (`Q-29`); `RCP-003` applies to the files read again. The new recipe list is pushed to every client (`IF-072`), and `load` uses it. A loaded process keeps the recipe it was loaded from. A recipe directory that disappears is created again as in `RCP-001`; while it cannot be read, the recipe list stays as it is and the error is logged once. (Legacy: recipes changed only with a new program version.)
 
-## 7.2 Goal definition format
+## 7.2 Recipe file format
+
+- `RCP-007` `[NEW]` A recipe file is a JSON object with the display `name` and the section `mashing_process`, whose `goals` are the recipe's ordered, non-empty list of goal definitions (§7.3). Sections with recipe design information (e.g. grain bill, hops) may be added next to `mashing_process` later; until the schema defines them, any other key is invalid (`Q-31`). The older format with `goals` at the top level is invalid: the error says to move `goals` into `mashing_process` (`RCP-003`).
+
+```json
+{
+  "$schema": "../recipe.schema.json",
+  "name": "Water Boiling",
+  "mashing_process": {
+    "goals": [
+      { "type": "HeatUpForHopsCooking" },
+      { "type": "CookWater", "minutes": 20, "name": "Cooking Water", "description": "Cooking water for 20min" }
+    ]
+  }
+}
+```
+
+`$schema` is optional and ignored by the application.
+
+## 7.3 Goal definition format
 
 ```json
 { "type": "HeatUp", "temperature": 62 }
@@ -33,7 +52,7 @@
 
 Temperatures in °C (number, 0…110), minutes integer ≥ 0.
 
-## 7.3 Legacy recipe catalogue (human-readable)
+## 7.4 Legacy recipe catalogue (human-readable)
 
 Recipe texts (including German names and legacy typos) are reproduced **verbatim**. The numbering is the
 legacy order; the recipe list is sorted by id (`RCP-002`). Recipe `ZORA` is the file `data/recipes/ZORA.json`, and so on.
@@ -110,7 +129,7 @@ legacy order; the recipe list is sorted by id (`RCP-002`). Recipe `ZORA` is the 
 > were never added (legacy `// ...` / `TODO go on`). After the last goal the
 > engine switches everything off (`ENG-025`).
 
-## 7.4 Test fixture recipe (from legacy unit test)
+## 7.5 Test fixture recipe (from legacy unit test)
 
 Used by acceptance tests only; not part of the production catalogue.
 

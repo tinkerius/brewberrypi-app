@@ -1,15 +1,17 @@
 {
   "$schema": "../recipe.schema.json",
   "name": "München 12.6 - SUD3:HANCOCK",
-  "goals": [
-    { "type": "PourInBrewingWater" },
-    { "type": "HeatUp", "temperature": 40 },
-    { "type": "MashIn" },
-    { "type": "HeatUp", "temperature": 50 },
-    { "type": "Rest", "temperature": 50, "minutes": 30, "name": "Eiweißrast", "description": "Eiweißrast @50 for 30min" },
-    { "type": "HeatUp", "temperature": 66 },
-    { "type": "Rest", "temperature": 66, "minutes": 110, "name": "Maltoserast", "description": "Maltoserast @66 for 110min" },
-    { "type": "IodineTest", "temperature": 66, "minutes": 10 },
-    { "type": "HeatUp", "temperature": 78 }
-  ]
+  "mashing_process": {
+    "goals": [
+      { "type": "PourInBrewingWater" },
+      { "type": "HeatUp", "temperature": 40 },
+      { "type": "MashIn" },
+      { "type": "HeatUp", "temperature": 50 },
+      { "type": "Rest", "temperature": 50, "minutes": 30, "name": "Eiweißrast", "description": "Eiweißrast @50 for 30min" },
+      { "type": "HeatUp", "temperature": 66 },
+      { "type": "Rest", "temperature": 66, "minutes": 110, "name": "Maltoserast", "description": "Maltoserast @66 for 110min" },
+      { "type": "IodineTest", "temperature": 66, "minutes": 10 },
+      { "type": "HeatUp", "temperature": 78 }
+    ]
+  }
 }

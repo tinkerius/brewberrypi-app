@@ -96,7 +96,7 @@ Order = catalogue order (`DOM-002`, `RCP-002`).
 
 ### `IF-031` RecipeDetail `[NEW]`
 
-One recipe with its goals exactly as in its recipe file ([07](07-recipes.md) §7.2), so the UI can show a recipe
+One recipe with its goals exactly as in its recipe file's `mashing_process` ([07](07-recipes.md) §7.2, §7.3; the message keeps them at the top level, `Q-31`), so the UI can show a recipe
 before it is loaded. Unknown id → not found (`IF-052`).
 
 ```json

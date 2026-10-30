@@ -2,16 +2,24 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://brewberrypi.local/schemas/recipe.schema.json",
   "title": "BrewberryPi recipe file",
-  "description": "One recipe per file; the file name without .json is the recipe id (^[A-Za-z0-9_-]+$). See docs/specification/07-recipes.md.",
+  "description": "One recipe per file; the file name without .json is the recipe id (^[A-Za-z0-9_-]+$). The goals are in the section mashing_process; sections with recipe design information may be added later. See docs/specification/07-recipes.md.",
   "type": "object",
-  "required": ["name", "goals"],
+  "required": ["name", "mashing_process"],
   "properties": {
     "$schema": { "type": "string" },
     "name": { "$ref": "#/$defs/text" },
-    "goals": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/goal" } }
+    "mashing_process": { "$ref": "#/$defs/mashingProcess" }
   },
   "additionalProperties": false,
   "$defs": {
+    "mashingProcess": {
+      "type": "object",
+      "required": ["goals"],
+      "properties": {
+        "goals": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/goal" } }
+      },
+      "additionalProperties": false
+    },
     "temperature": { "type": "number", "minimum": 0, "maximum": 110 },
     "minutes": { "type": "integer", "minimum": 0 },
     "text": { "type": "string", "minLength": 1 },

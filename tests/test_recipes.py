@@ -22,12 +22,14 @@ from brewberrypi.recipes import (
 SPEC_DATA = Path(__file__).parents[1] / "docs" / "specification" / "data"
 PACKAGE_DATA = Path(__file__).parents[1] / "src" / "brewberrypi" / "data"
 SORTED_IDS = ["BENIWEISS", "Dummy", "HANCOCK", "HIPA", "TEST", "WIT", "WaterBoil", "ZORA"]
+MASH_IN = {"goals": [{"type": "MashIn"}]}
+"""A recipe file's `mashing_process` with a single goal."""
 
 
 def write_recipe(directory: Path, goals: list[dict[str, Any]], recipe_id: str = "MyRecipe") -> Path:
     directory.mkdir(exist_ok=True)
     file = directory / f"{recipe_id}.json"
-    file.write_text(json.dumps({"name": f"Recipe {recipe_id}", "goals": goals}))
+    file.write_text(json.dumps({"name": f"Recipe {recipe_id}", "mashing_process": {"goals": goals}}))
     return file
 
 
@@ -68,6 +70,22 @@ def test_AC_081_rest_without_minutes_is_skipped_naming_file_and_goal(
     assert str(bad) in message
     assert "recipe 'MyRecipe', goal 2 (index 1, Rest)" in message
     assert "minutes" in message
+
+
+def test_AC_094_old_recipe_format_is_skipped_naming_file_and_new_section(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    directory = tmp_path / "recipes"
+    write_recipe(directory, [{"type": "MashIn"}], recipe_id="Good")
+    old = directory / "Old.json"
+    old.write_text(json.dumps({"name": "Old", "goals": [{"type": "MashIn"}]}))
+    with caplog.at_level(logging.ERROR):
+        catalogue = load_recipes(configured(directory))
+    assert [recipe.id for recipe in catalogue] == ["Good"]  # the other recipes are loaded
+    [record] = caplog.records
+    message = record.getMessage()
+    assert message.startswith("invalid recipe file, recipe skipped: ")
+    assert f"{old}: recipe 'Old': old recipe format: move goals into mashing_process" in message
 
 
 def test_spec_recipe_files_are_read_with_verbatim_texts() -> None:
@@ -130,7 +148,7 @@ def test_Q27_a_file_name_that_is_no_recipe_id_is_skipped(
 
 def test_an_id_inside_the_file_is_rejected(tmp_path: Path) -> None:
     with pytest.raises(RecipeError, match=re.escape("must not contain {'id'}")):
-        parse_recipe("R", json.dumps({"id": "R", "name": "r", "goals": [{"type": "MashIn"}]}), "R.json")
+        parse_recipe("R", json.dumps({"id": "R", "name": "r", "mashing_process": MASH_IN}), "R.json")
 
 
 def test_AC_084_a_missing_recipe_directory_is_created_with_the_shipped_recipes(tmp_path: Path) -> None:
@@ -229,7 +247,7 @@ def test_AC_085_added_changed_and_removed_recipe_files_are_read_again(tmp_path: 
     assert library.refresh()
     assert ids(library) == ["HOLD30"]
     assert not library.refresh()  # nothing changed since
-    (directory / "HOLD30.json").write_text(json.dumps({"name": "Hold 30 °C", "goals": [{"type": "MashIn"}]}))
+    (directory / "HOLD30.json").write_text(json.dumps({"name": "Hold 30 °C", "mashing_process": MASH_IN}))
     assert library.refresh()
     recipe = library.get("HOLD30")
     assert recipe is not None
@@ -334,7 +352,9 @@ def test_invalid_json_names_file_line_and_column() -> None:
 )
 def test_invalid_goal_is_reported_naming_recipe_and_goal(goal: dict[str, Any], expected: str) -> None:
     with pytest.raises(RecipeError) as error:
-        parse_recipe("MyRecipe", json.dumps({"name": "x", "goals": [goal]}), "MyRecipe.json")
+        parse_recipe(
+            "MyRecipe", json.dumps({"name": "x", "mashing_process": {"goals": [goal]}}), "MyRecipe.json"
+        )
     assert str(error.value).startswith("MyRecipe.json: recipe 'MyRecipe', goal 1")
     assert expected in str(error.value)
 
@@ -342,7 +362,9 @@ def test_invalid_goal_is_reported_naming_recipe_and_goal(goal: dict[str, Any], e
 def test_rest_with_default_texts_is_valid() -> None:
     recipe = parse_recipe(
         "R",
-        json.dumps({"name": "x", "goals": [{"type": "Rest", "temperature": 62, "minutes": 10}]}),
+        json.dumps(
+            {"name": "x", "mashing_process": {"goals": [{"type": "Rest", "temperature": 62, "minutes": 10}]}}
+        ),
         "R.json",
     )
     assert recipe.goals[0] == GoalDefinition(type="Rest", temperature=62, minutes=10)
@@ -351,10 +373,19 @@ def test_rest_with_default_texts_is_valid() -> None:
 @pytest.mark.parametrize(
     ("content", "expected"),
     [
-        ({}, "recipe 'R': must contain ['goals', 'name']"),
+        ({}, "recipe 'R': must contain ['mashing_process', 'name']"),
         ([], "recipe 'R': must be object"),
-        ({"name": "", "goals": [{"type": "MashIn"}]}, "recipe 'R': name must be longer than or equal to 1"),
-        ({"name": "x", "goals": []}, "recipe 'R': goals must contain at least 1"),
+        ({"name": "", "mashing_process": MASH_IN}, "recipe 'R': name must be longer than or equal to 1"),
+        ({"name": "x", "mashing_process": {}}, "recipe 'R': mashing_process must contain ['goals']"),
+        (
+            {"name": "x", "mashing_process": {"goals": []}},
+            "recipe 'R': mashing_process.goals must contain at least 1",
+        ),
+        (
+            {"name": "x", "mashing_process": {**MASH_IN, "x": 1}},
+            "recipe 'R': mashing_process must not contain {'x'}",
+        ),
+        ({"name": "x", "mashing_process": MASH_IN, "goals": []}, "recipe 'R': must not contain {'goals'}"),
     ],
 )
 def test_invalid_recipe_structure_is_reported(content: Any, expected: str) -> None:

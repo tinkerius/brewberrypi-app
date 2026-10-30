@@ -1,13 +1,15 @@
 {
   "$schema": "../recipe.schema.json",
   "name": "München 12.6 - SUD5:WIT",
-  "goals": [
-    { "type": "PourInBrewingWater" },
-    { "type": "HeatUp", "temperature": 40 },
-    { "type": "MashIn" },
-    { "type": "HeatUp", "temperature": 65 },
-    { "type": "Rest", "temperature": 65, "minutes": 50, "name": "Maltoserast", "description": "Maltoserast @65 for 50min" },
-    { "type": "IodineTest", "temperature": 65, "minutes": 10 },
-    { "type": "HeatUp", "temperature": 78 }
-  ]
+  "mashing_process": {
+    "goals": [
+      { "type": "PourInBrewingWater" },
+      { "type": "HeatUp", "temperature": 40 },
+      { "type": "MashIn" },
+      { "type": "HeatUp", "temperature": 65 },
+      { "type": "Rest", "temperature": 65, "minutes": 50, "name": "Maltoserast", "description": "Maltoserast @65 for 50min" },
+      { "type": "IodineTest", "temperature": 65, "minutes": 10 },
+      { "type": "HeatUp", "temperature": 78 }
+    ]
+  }
 }

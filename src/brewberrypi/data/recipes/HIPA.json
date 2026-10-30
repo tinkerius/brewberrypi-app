@@ -1,11 +1,13 @@
 {
   "$schema": "../recipe.schema.json",
   "name": "München 12.6 - SUD4:HIPA",
-  "goals": [
-    { "type": "PourInBrewingWater" },
-    { "type": "HeatUp", "temperature": 68 },
-    { "type": "MashIn" },
-    { "type": "Rest", "temperature": 68, "minutes": 60, "name": "Verzuckerungsrast", "description": "Verzuckuerungsrast @68 for 60min" },
-    { "type": "IodineTest", "temperature": 68, "minutes": 10 }
-  ]
+  "mashing_process": {
+    "goals": [
+      { "type": "PourInBrewingWater" },
+      { "type": "HeatUp", "temperature": 68 },
+      { "type": "MashIn" },
+      { "type": "Rest", "temperature": 68, "minutes": 60, "name": "Verzuckerungsrast", "description": "Verzuckuerungsrast @68 for 60min" },
+      { "type": "IodineTest", "temperature": 68, "minutes": 10 }
+    ]
+  }
 }

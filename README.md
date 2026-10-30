@@ -126,6 +126,23 @@ cannot be created or read stops the start, with exit code 3. Everything the appl
 group-writable, so the brewer can edit it as another user of the same group (on BrewberryPi OS: the share's
 `app` folder). The format of one file is
 [recipe.schema.json](docs/specification/data/recipe.schema.json); see [07-recipes.md](docs/specification/07-recipes.md).
+The goals are in the section `mashing_process`, so that recipe design information can be added next to it later:
+
+```json
+{
+  "name": "Water Boiling",
+  "mashing_process": {
+    "goals": [
+      { "type": "HeatUpForHopsCooking" },
+      { "type": "CookWater", "minutes": 20, "name": "Cooking Water", "description": "Cooking water for 20min" }
+    ]
+  }
+}
+```
+
+Recipe files in the older format, with `goals` at the top level, are skipped, and the log says to move `goals` into
+`mashing_process`. To update them, do that in each file, or delete the recipe directory so that the next start
+writes the shipped recipes again (recipes of your own are then lost).
 
 ### API
 

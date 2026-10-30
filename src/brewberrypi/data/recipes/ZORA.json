@@ -1,17 +1,19 @@
 {
   "$schema": "../recipe.schema.json",
   "name": "München 12.6 - SUD1:ZORA",
-  "goals": [
-    { "type": "PourInBrewingWater" },
-    { "type": "HeatUp", "temperature": 40 },
-    { "type": "MashIn" },
-    { "type": "HeatUp", "temperature": 50 },
-    { "type": "Rest", "temperature": 50, "minutes": 25, "name": "Maltoserast", "description": "Maltoserast @50 for 25min" },
-    { "type": "HeatUp", "temperature": 62 },
-    { "type": "Rest", "temperature": 62, "minutes": 30, "name": "Verzuckerungsrast", "description": "Verzuckerungsrast @62 for 30min" },
-    { "type": "HeatUp", "temperature": 70 },
-    { "type": "Rest", "temperature": 70, "minutes": 40, "name": "2. Verzuckerungsrast", "description": "2. Verzuckerungsrast @70 for 40min" },
-    { "type": "IodineTest", "temperature": 68, "minutes": 10 },
-    { "type": "HeatUp", "temperature": 76 }
-  ]
+  "mashing_process": {
+    "goals": [
+      { "type": "PourInBrewingWater" },
+      { "type": "HeatUp", "temperature": 40 },
+      { "type": "MashIn" },
+      { "type": "HeatUp", "temperature": 50 },
+      { "type": "Rest", "temperature": 50, "minutes": 25, "name": "Maltoserast", "description": "Maltoserast @50 for 25min" },
+      { "type": "HeatUp", "temperature": 62 },
+      { "type": "Rest", "temperature": 62, "minutes": 30, "name": "Verzuckerungsrast", "description": "Verzuckerungsrast @62 for 30min" },
+      { "type": "HeatUp", "temperature": 70 },
+      { "type": "Rest", "temperature": 70, "minutes": 40, "name": "2. Verzuckerungsrast", "description": "2. Verzuckerungsrast @70 for 40min" },
+      { "type": "IodineTest", "temperature": 68, "minutes": 10 },
+      { "type": "HeatUp", "temperature": 76 }
+    ]
+  }
 }

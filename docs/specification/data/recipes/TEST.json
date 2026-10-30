@@ -1,7 +1,9 @@
 {
   "$schema": "../recipe.schema.json",
   "name": "Test Process",
-  "goals": [
-    { "type": "IodineTest", "temperature": 25, "minutes": 1 }
-  ]
+  "mashing_process": {
+    "goals": [
+      { "type": "IodineTest", "temperature": 25, "minutes": 1 }
+    ]
+  }
 }
