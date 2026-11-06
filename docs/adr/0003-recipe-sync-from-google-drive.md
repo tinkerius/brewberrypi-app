@@ -3,7 +3,10 @@
 - **Status:** Proposed
 - **Date:** 2026-11-06
 - **Deciders:** Benedikt Hauptmann (product owner); proposal by Claude Code
-- **Question:** `Q-34` (direction decided 2026-11-06: one way, from the cloud to the device)
+- **Question:** `Q-34`. Decided by the product owner on 2026-11-06:
+  - one way, from the cloud to the device;
+  - while the sync is connected, the recipe directory is a mirror of the cloud, and local changes are
+    overwritten.
 
 ## Context
 
@@ -21,8 +24,9 @@ What constrains the design:
 - **The application owns the recipe directory**, its format version and migration (`RCP-001`, `RCP-006`,
   `RCP-008`..`RCP-011`; runtime contract v2: `/config` is "the app's own folder"). So the sync is part of the
   application, not of BrewberryPi OS.
-- **The brewer still edits the same directory by hand** through the share (`Q-29`). The sync must never
-  destroy such a file.
+- **The brewer can also edit the directory through the share** (`Q-29`). Sharing the folder between
+  hand edits and the sync gives cases that are hard to explain (see Options), so while the sync is connected
+  the sync alone owns the folder.
 - **A loaded process keeps its recipe** (`RCP-006`). The sync never touches the HAL, and brewing never waits
   for the network. All outputs go off at startup before anything else (spec 10 §10.1); the sync starts later
   and cannot delay that.
@@ -41,12 +45,19 @@ What constrains the design:
 2. **The editor pushes to the device.** The editor runs on HTTPS. The device is plain HTTP on the LAN, so the
    browser blocks the requests (mixed content and Chrome's local-network-access rules). It would also only
    sync while the editor is open. Rejected.
-3. **The app pulls from Drive, signed in with Google's OAuth device flow, into the existing recipe
-   directory, with a ledger of the files it wrote.** The app knows the format, the brewer sees synced recipes
-   like any other, and there is no new folder or contract change. Chosen.
-4. Like 3, but into a **separate folder** (e.g. `cloud-recipes/`). That changes `RCP-001` (two
-   directories, id clashes between them) and the brewer can't see in one place what the device brews from.
-   The ledger in option 3 gives the same protection. Rejected.
+3. **The app pulls from Drive and merges with local files**: a ledger records the files the sync wrote, and
+   the sync never overwrites or removes a file the brewer made or changed. Rejected after review, because it
+   leaves cases that are hard to explain:
+   - a synced file edited on the share silently stops syncing;
+   - a deleted synced file comes back;
+   - a local file of the same id hides the Drive recipe for good;
+   - a lost ledger stops all updates;
+   - changing the Google account leaves the old account's recipes behind.
+4. **Like 3, with a separate folder owned by the sync** (`recipes/drive/`). Clear ownership, but two recipe
+   folders, id clashes between them, and a change of `RCP-001`. More than this needs. Rejected.
+5. **The app pulls from Drive and mirrors it into the recipe directory.** While connected, the directory holds
+   exactly the Drive recipes. Local changes are overwritten, with a copy kept in `.backup`. One simple rule,
+   with no ledger to trust and no id clashes. Chosen.
 
 ## Decision
 
@@ -58,22 +69,62 @@ What constrains the design:
 - The client ID and the device-flow "secret" are built into the application. Google does not treat a
   device-flow secret as confidential. They can be overridden in `config.json` for anyone who builds their
   own.
-- **Connect** in the app's UI asks Google for a device code. The UI then shows the code, the address
-  `https://www.google.com/device` and a QR code. The brewer enters the code on a phone or PC and allows
-  access. The app polls Google's token endpoint at the interval Google sets and stores the **refresh token**.
-- **Disconnect** revokes the token at Google and deletes it on the device. Synced recipe files stay; they
-  become ordinary local files (their ledger entries are removed).
+- **Connect** in the app's UI first warns:
+
+  > The recipes on this device will be replaced by the recipes in your Google Drive. Recipes that are only
+  > on this device are moved to `recipes/.backup`. Changes made on the device are overwritten while the sync
+  > is on.
+
+  Then it asks Google for a device code. The UI shows the code, the address `https://www.google.com/device`
+  and a QR code. The brewer enters the code on a phone or PC and allows access. The app polls Google's token
+  endpoint at the interval Google sets and stores the **refresh token**.
+- **Disconnect** revokes the token at Google and deletes it on the device. The recipe files stay as they
+  are and become ordinary local files again. The notice file (below) is removed.
 
 ### What the device sees (`drive.file`)
 
 - The app finds the folder `recipes` by `appProperties brewberrypi = recipes` under the folder with
-  `brewberrypi = root`, the same queries as the editor's `DriveStore.init()`. If the folder doesn't exist,
-  the status says so. The app **never creates** folders or files in Drive.
+  `brewberrypi = root`, the same queries as the editor's `DriveStore.init()`. The app **never creates**
+  folders or files in Drive.
 - It reads the `*.json` files directly in that folder, and only those the project can see: files the editor
   created, or that the brewer picked in the editor with "Add files from Drive". A file uploaded straight
   through drive.google.com is not seen until it is picked in the editor. The UI and the editor's help say so.
 
-### What a sync does
+### The mirror rule
+
+While the sync is connected, the recipe files (`*.json`) in the recipe directory are exactly the recipes of
+the Drive folder that this application can read, each in the latest format version. In detail:
+
+| On the device | After the next sync |
+|---|---|
+| A Drive recipe is missing (new in Drive, or deleted on the device) | written |
+| A Drive recipe differs (changed in Drive, or changed on the device) | overwritten; a changed device file is first copied to `.backup/<id>.local.json` |
+| A recipe file that is not in Drive (deleted, trashed or renamed there, or added on the device) | moved to `.backup/<id>.removed.json` |
+| Other files (not `*.json`), hidden files, subdirectories | left alone (`RCP-001` ignores them anyway) |
+
+Drive files that this application cannot read are **not on the device**, and the status lists them:
+
+| Case | Status text (to be fixed in the spec) |
+|---|---|
+| Format version newer than this application reads (`RCP-009`) | "needs a newer app version" |
+| Invalid (syntax, schema, goal type, migration fails) | the reader's precise error (`RCP-003`) |
+| File name that is not a valid recipe id (`RCP-001`) | "not a valid recipe file name" |
+
+The editor validates before every save, so the last two only happen to files changed outside the editor.
+
+**Notice file.** While the sync is connected, the recipe directory holds `DO-NOT-EDIT-synced-from-Google-Drive.txt`.
+It is a `.txt` file, so it is never read as a recipe (`RCP-001`). It is written again if deleted and removed
+on Disconnect. Its text:
+
+> The recipes in this folder are a copy of the folder BrewberryPi/recipes in the Google Drive of
+> <account>. Change them at https://recipes.brewberrypi.org. Changes made here are overwritten within
+> 30 seconds; the files they replace are kept in .backup. To edit recipes here instead, disconnect the
+> recipe sync in the BrewberryPi app.
+
+`.backup` already holds the originals of migrated files (`RCP-010`). The sync's copies use their own name
+suffixes, `.local` and `.removed`, and replace an older copy of the same name.
+
+### When a sync runs, and what one pass does
 
 A sync runs:
 - as soon as the app has finished starting (outputs off, server listening), if the brewer is connected, and
@@ -83,70 +134,45 @@ A sync runs:
 
 The device has to poll: Drive's change notifications are sent to a public HTTPS address, and the device is
 on the LAN. A pass where nothing changed is one small `files.list` request, so 30 s costs little: about
-3,000 requests a day, well inside Drive's free quota, and a few MB of traffic a month. Recipes are only
-downloaded when their Drive `version` changed.
+3,000 requests a day, well inside Drive's free quota, and a few MB of traffic a month.
 
-It is one pass:
-
-1. **List** the recipes folder: `files.list` with `fileId`, `name`, `version`, `trashed`; one request, paged.
-2. For every Drive file whose recipe id (`<id>` of `<id>.json`, a valid id per `RCP-001`) is new, or whose
-   Drive `version` changed since the last sync:
-   - **download** it (`alt=media`);
-   - **check** it with the same reader as the recipe directory (`read_recipe`: schema, goal types, format
-     version);
-   - **migrate** it to the latest format if it is older (`RCP-010`).
-   
-   The file written to disk is always in the latest version, so the directory watcher never has to migrate
-   it again and never rewrites it.
-3. **Write** it to `recipes/<id>.json` (atomically and group-writable, `NFR-032`) **only if** one of
-   these holds:
-   - no file `<id>.json` exists; or
-   - the ledger says the sync wrote this file and its content still has the SHA-256 the ledger recorded.
-     The brewer has not changed it since.
-4. **Remove** `recipes/<id>.json` when its Drive file is gone (deleted, trashed, or renamed to another id),
-   **only if** the ledger says the sync wrote it and it is unchanged. It is moved to
-   `.backup/<id>.removed.json`, not deleted.
-5. The directory watcher (`RCP-006`) picks up the changes as usual: the new recipe list reaches every client,
+One pass:
+1. **List** the Drive folder: `files.list` with `fileId`, `name` and `version`; one request, paged.
+2. **Download** each file whose Drive `version` differs from the cache (`alt=media`). **Check** it with the
+   directory's own reader (`read_recipe`) and **migrate** it to the latest format (`RCP-010`). The text to
+   write is cached in `recipes/.sync/` (hidden, so never read as a recipe) together with the Drive `version`.
+   The written file is in the latest version, so the watcher never migrates or rewrites it.
+3. **Compare** the directory with the cached texts, byte for byte, and apply the mirror rule. Every write is
+   atomic and group-writable (`NFR-032`).
+4. The directory watcher (`RCP-006`) picks up the changes as usual: the new recipe list reaches every client,
    and a loaded process keeps its recipe.
 
-**Skipped, and reported** in the status per recipe. The local file always stays as it is:
+The cache is only an optimisation. If it is lost, the next pass downloads every recipe again and nothing
+else changes. A local change is found by comparing the files themselves, not by trusting a record.
 
-| Case | Status text (to be fixed in the spec) |
-|---|---|
-| A local file of that id exists that the sync didn't write, or the brewer changed a synced file | "kept the file on the device" |
-| Drive file in a newer format version than this app reads (`RCP-009`) | "needs a newer app version" |
-| Drive file invalid (syntax, schema, goal type, migration fails) | the reader's precise error (`RCP-003`) |
-| File name that is not a valid recipe id | "not a valid recipe file name" |
-
-To let Drive win again for a recipe the brewer changed or created locally, they delete the local file. The
-next sync writes the Drive version.
-
-**Ledger** `recipes/.sync/state.json`: a hidden subdirectory, so it is never read as a recipe (`RCP-001`),
-and it is written atomically. It holds:
-- the Drive folder id;
-- and for each synced recipe: the Drive `fileId`, the Drive `version`, and the SHA-256 of the bytes the sync
-  wrote.
-
-If the ledger is lost, nothing is overwritten or removed: every existing file counts as local, and only new
-ids are written.
+**Safety net against emptying the device.** If the Drive folder is not found, cannot be listed, or Google
+answers with an error, the pass stops and the directory is left as it is. Only a successful, complete
+listing changes files. A Drive folder that is really empty does empty the device. That is the mirror rule,
+and the files are in `.backup`.
 
 ### Errors and offline
 
-- No network, DNS failure, TLS failure before NTP has run, Google 5xx or 429: the sync stops, the status
-  shows "offline since …", and it is retried with backoff: the wait doubles after each failure, up to 5 minutes, and is back to
-  `sync.intervalSeconds` after a pass that succeeds. Nothing on disk
-  changes.
+- No network, DNS failure, TLS failure before NTP has run, Google 5xx or 429: the pass stops, the status
+  shows "offline since …", and it is retried with backoff. The wait doubles after each failure, up to
+  5 minutes, and goes back to `sync.intervalSeconds` after a pass that succeeds. Nothing on disk changes, so
+  the device brews with the recipes of the last successful pass.
 - `invalid_grant` (token revoked by the brewer at Google, or expired): the status becomes "disconnected,
-  connect again". The token file is deleted. Synced files stay.
-- Sync errors are logged once per change of state, never every pass. Tokens, codes and file contents are
+  connect again". This counts as a Disconnect: the token is deleted, the recipe files stay, and the notice
+  file is removed.
+- Sync errors are logged once per change of state, never on every pass. Tokens, codes and file contents are
   never logged.
 - The sync runs in its own asyncio task with timeouts on every request. An exception in it ends that pass
   only. It never touches the engine, the HAL or the control loop, and startup never waits for it.
 
 ### Credentials
 
-The token file is `/config/.sync/google-token.json` (the refresh token, the account e-mail). It is written
-atomically and group-writable like every file in `/config` (`NFR-032`).
+The token file is `/config/.sync/google-token.json` (the refresh token and the account e-mail). It is
+written atomically and group-writable like every file in `/config` (`NFR-032`).
 
 On BrewberryPi OS, `/config` is in the brewer's file share, so anyone with the device password can read the
 token. That is accepted for this version:
@@ -167,42 +193,62 @@ a follow-up, not part of this decision.
 
 ### Interface (ADR-0002: REST plus SSE)
 
-- `GET /api/sync` → `SyncStatus`:
-  - `state`: one of `disconnected`, `connecting`, `idle`, `syncing`, `offline`, `error`;
-  - `account`: the connected e-mail;
-  - while connecting: `userCode`, `verificationUrl`, `expiresAt`;
+- `GET /api/sync` returns a `SyncStatus`:
+  - `state`: one of `disconnected`, `connecting`, `idle`, `syncing`, `offline`;
+  - `account`: the connected e-mail address;
+  - while connecting: `userCode`, `verificationUrl` and `expiresAt`;
   - `lastSync`: wall-clock time, display only;
-  - `issues`: `[{recipeId, message}]`.
-- `POST /api/sync/connect`, `POST /api/sync/disconnect`, `POST /api/sync/run`. Each has one reply and an
+  - `issues`: `[{recipeId, message}]` for Drive files not on the device.
+- `POST /api/sync/connect`, `POST /api/sync/disconnect` and `POST /api/sync/run`. Each has one reply and an
   outcome (`Q-28`). Cross-origin requests are refused like every other command (`Q-17`).
 - Push event `sync` with the `SyncStatus` when it changes. It is also part of the `snapshot`.
-- UI: a "Recipe sync" panel under the recipe list. It shows the state, the connected account, the time of the
-  last sync, Connect / Disconnect / Sync now, the device code with its QR code, and the issues.
+- UI: a "Recipe sync" panel under the recipe list. It shows:
+  - the state, the connected account and the time of the last sync;
+  - Connect (with the warning above), Disconnect and Sync now;
+  - the device code with its QR code;
+  - the issues.
+  
+  While connected, the recipe list says "from Google Drive".
 
 ### Implementation sketch
 
-- New module `src/brewberrypi/sync/`, with:
+- New module `src/brewberrypi/sync/`:
   - `google_auth.py`: device flow, refresh, revoke;
   - `drive.py`: list and download, read only;
-  - `ledger.py`;
-  - `syncer.py`: the pass above, a pure function of Drive listing, ledger and directory state, so it is easy
-    to test.
+  - `mirror.py`: the mirror rule, a pure function from (Drive listing, cached texts, directory contents) to
+    a list of actions, so it is easy to test;
+  - `syncer.py`: the task, its timing and the status.
 - HTTP client: `httpx` (async; `MockTransport` gives the tests a fake Google without network access).
 - Reuse `read_recipe`, `recipe_migrations`, `files.write_file` and `files.sync_directory`. Don't add a second
   validator.
 - Tests use the fake Google, a temporary recipe directory and the controllable clock. There is one test per
-  new acceptance criterion: new, changed, removed, local-wins, changed-locally-wins, ledger lost, newer
-  version, invalid file, offline, revoked token, loaded process unchanged.
+  new acceptance criterion. Cases to cover:
+  - Drive changes: new, changed, removed, renamed;
+  - device changes: file changed, deleted, added;
+  - the first connect with local recipes;
+  - the cache lost;
+  - Drive files: newer version, invalid, bad file name;
+  - Drive folder missing, listing fails, offline;
+  - token revoked;
+  - Disconnect leaves the files;
+  - the notice file;
+  - a loaded process is unchanged.
 
 ## Consequences
 
 - Positive:
+  - One rule the brewer can rely on: while the sync is on, the device brews exactly what is in Drive.
+  - Nothing is lost: every file the sync replaces or removes has a copy in `.backup`.
   - A recipe saved in the editor is on the device within `sync.intervalSeconds`, or at once with Sync now.
-  - No new folder and no change to `RCP-001`. No runtime contract change and no OS change: the container
-    already has `Network=host`.
-  - Brewer edits over the share are never overwritten.
+  - No new folder. No runtime contract change and no OS change: the container already has `Network=host`.
   - It works the same in `--dummymode` and in plain Docker.
 - Negative / risks:
+  - Hand edits over the share are overwritten while the sync is on. That is the point, but it surprises
+    anyone who skips the warning and the notice file.
+  - `brewberry-config import` on the OS also writes recipe files. While the sync is on, it is overwritten
+    the same way; the OS user manual should say so.
+  - A recipe that only lives on the device has to be uploaded in the editor before connecting, or it ends
+    up in `.backup`.
   - **Two Google facts must be checked first** (a spike before the milestone; `developers.google.com` was
     not reachable from the session that wrote this ADR):
     1. **`drive.file` is allowed in the device flow.** Google's list of allowed scopes for limited-input
@@ -219,11 +265,16 @@ a follow-up, not part of this decision.
   - The app talks to the internet for the first time. The privacy notes of the app and the editor must say
     what the device reads and where the token is kept.
 - Follow-ups:
-  - Answer `Q-34` and write the requirements into spec 07, new section 7.6, with acceptance criteria. Lift
-    the out-of-scope line in spec 01 for this feature.
+  - Answer `Q-34` and write the requirements into spec 07, new section 7.6, with acceptance criteria:
+    - `RCP-001`: a file deleted by the brewer is not written again, except while the sync is connected;
+    - `RCP-004`: unchanged;
+    - lift the out-of-scope line in spec 01 for this feature.
   - Spec 08: `SyncStatus` and the event `sync`.
   - Add `sync` to `config.schema.json`.
   - A milestone in `docs/implementation-plan.md`.
-  - Recipe editor: help text "Your BrewberryPi picks up saved recipes within 30 seconds"; keep the Drive layout
-    stable (already a rule there); privacy page.
+  - Recipe editor:
+    - help text "Your BrewberryPi picks up saved recipes within 30 seconds";
+    - keep the Drive layout stable (already a rule there);
+    - privacy page.
+  - OS user manual: recipes in the share are read-only in practice while the sync is on.
   - Later, if wanted: runtime contract v3 with a secrets mount for the token.
