@@ -14,7 +14,7 @@ spec section; do not silently change behaviour.
 | `Q-06` | Treat DS18B20 power-on value `85.0 °C` as invalid? | Valid (legacy) | `HW-031` |
 | `Q-07` | Fix spelling in UI texts (`successfull` → `successful`, `Verzuckuerungsrast`, `Maltoserastr`)? | Keep verbatim | `GOAL-005`, recipes |
 | `Q-08` | Should the chart history reset when a new process is loaded/started, and should target temperatures / goal boundaries be drawn (the legacy UI contained a mock-up of this)? | History since server start, temperature only | `IF-042`, `UI-020` |
-| `Q-09` | Recipe management in the UI (create/edit/delete)? | No — file only | `RCP-004` |
+| `Q-09` | Recipe management in the UI (create/edit/delete)? | **Answered 2026-11-06:** no editing in the application's UI; recipes stay files (`RCP-004` unchanged). They are created and edited with the separate, public web editor at https://recipes.brewberrypi.org ([tinkerius/brewberrypi-recipeeditor](https://github.com/tinkerius/brewberrypi-recipeeditor)), which writes files in the format of `RCP-001` and [data/recipe.schema.json](data/recipe.schema.json): in the browser (download) or in the brewer's Google Drive (`BrewberryPi/recipes`). The brewer copies a file into the recipe directory. Syncing that Drive folder with the recipe directory is possible future work, not specified. | `RCP-004` |
 | `Q-10` | Any access protection (PIN/password) for the web UI? | None (trusted LAN) | `IF-060` |
 | `Q-11` | Show successful command replies as modal (legacy intent) or as non-blocking toast? | Modal for all replies | `UI-050` |
 | `Q-12` | Over-temperature cut-off (e.g. heater off above a configurable max temperature when not boiling) — desired as additional safety? | Not included (not in legacy) | `NFR-001` |

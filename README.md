@@ -126,6 +126,10 @@ cannot be created or read stops the start, with exit code 3. Everything the appl
 group-writable, so the brewer can edit it as another user of the same group (on BrewberryPi OS: the share's
 `app` folder). The format of one file is
 [recipe.schema.json](docs/specification/data/recipe.schema.json); see [07-recipes.md](docs/specification/07-recipes.md).
+To write recipes, use the web editor at https://recipes.brewberrypi.org
+([tinkerius/brewberrypi-recipeeditor](https://github.com/tinkerius/brewberrypi-recipeeditor)): it checks a recipe
+against this format, and you download the file (or keep it in your Google Drive) and copy it into the recipe
+directory.
 
 ### API
 

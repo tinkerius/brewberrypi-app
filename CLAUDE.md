@@ -16,6 +16,7 @@ behaviour is fully specified in `docs/specification/`.
 - `docs/specification/` — the specification (`00-index.md` first). Requirement IDs like `ENG-012`, acceptance criteria like `AC-033`.
 - `docs/specification/data/` — normative reference data: `recipes/` (one file per recipe), `config.example.json`, JSON schemas for a recipe, config and messages.
 - `src/brewberrypi/data/` — copies of the spec's JSON schemas and `recipes/`, shipped in the package; a test fails if they differ from `docs/specification/data/` (copy them when the spec data changes).
+- Recipe editor: the public web editor (`tinkerius/brewberrypi-recipeeditor`, https://recipes.brewberrypi.org) copies `recipe.schema.json` and `data/recipes/` and records this repository's commit; when they change, run its `scripts/sync-upstream.sh` (a new goal type also needs its `src/model.ts` and `src/validate.ts`).
 - `docs/recovery/bug-and-deviation-log.md` — `[FIX-nn]` entries: legacy defects the spec deliberately fixes.
 - `docs/adr/` — architecture decision records (copy `0000-template.md`).
 - `docs/implementation-plan.md` — milestones M0–M12 and their acceptance criteria.
