@@ -1,0 +1,14 @@
+{
+  "$schema": "../../docs/specification/data/recipe.schema.json",
+  "name": "Demo Process",
+  "mashing_process": {
+    "goals": [
+      { "type": "HeatUp", "temperature": 62 },
+      { "type": "Rest", "temperature": 62, "minutes": 10 },
+      { "type": "IodineTest", "temperature": 62, "minutes": 10 },
+      { "type": "HeatUp", "temperature": 78 },
+      { "type": "Lautering" },
+      { "type": "HeatUpForHopsCooking" }
+    ]
+  }
+}

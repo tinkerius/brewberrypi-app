@@ -35,13 +35,13 @@ function button(label: string): HTMLButtonElement {
 }
 
 const RECIPES: Recipe[] = [
-  { id: "ZORA", name: "München 12.6 - SUD1:ZORA" },
-  { id: "TEST", name: "Test Process" },
+  { id: "BENIWEISS", name: "München 12.6 - SUD2:BENIWEISS" },
+  { id: "IODINE", name: "Iodine Test" },
 ];
 
 const RUNNING: ProcessState = {
-  processid: "TEST",
-  processname: "Test Process",
+  processid: "IODINE",
+  processname: "Iodine Test",
   state: "Running",
   goals: [
     { name: "Heat Up", description: "Heat up mash to 25.0 degrees (C).", status: "Done", statuspercent: 100, statusmessage: "100%" },
@@ -114,7 +114,7 @@ describe("Hardware Status panel", () => {
 describe("Brewing Process panel", () => {
   it("UI-030 shows the process name and one item per goal in order", () => {
     processPanel(RUNNING);
-    expect(root.querySelector("[data-process-name]")?.textContent).toBe("Test Process");
+    expect(root.querySelector("[data-process-name]")?.textContent).toBe("Iodine Test");
     expect([...root.querySelectorAll("li h3")].map((h) => h.textContent)).toEqual(["Heat Up", "Iodine Test", "Lautering"]);
     expect([...root.querySelectorAll("[data-badge]")].map((b) => b.textContent)).toEqual(["Done", "Active", "Waiting"]);
   });
@@ -157,12 +157,12 @@ describe("Brewing Process panel", () => {
   it("UI-040 loads the selected recipe", () => {
     const { send } = processPanel({ state: "NoProcess" });
     const select = root.querySelector("select") as HTMLSelectElement;
-    expect([...select.options].map((o) => o.textContent)).toEqual(["Load Process", "München 12.6 - SUD1:ZORA", "Test Process"]);
+    expect([...select.options].map((o) => o.textContent)).toEqual(["Load Process", "München 12.6 - SUD2:BENIWEISS", "Iodine Test"]);
     act(() => {
-      select.value = "ZORA";
+      select.value = "BENIWEISS";
       select.dispatchEvent(new Event("change"));
     });
-    expect(send).toHaveBeenCalledWith("load", { recipe: "ZORA" });
+    expect(send).toHaveBeenCalledWith("load", { recipe: "BENIWEISS" });
   });
 
   it("UI-040 shows loading… before the recipe list arrives", () => {
@@ -207,10 +207,10 @@ describe("Brewing Process panel", () => {
 describe("dialogs", () => {
   it("AC-076 shows the reply message in the Information modal; Confirm closes it", () => {
     const onConfirm = vi.fn();
-    show(<InformationModal reply={{ command: "load", success: true, message: "Process Test Process (TEST) loaded." }} onConfirm={onConfirm} />);
+    show(<InformationModal reply={{ command: "load", success: true, message: "Process Iodine Test (IODINE) loaded." }} onConfirm={onConfirm} />);
     const dialog = root.querySelector('[role="dialog"]');
     expect(dialog?.querySelector("#modal-title")?.textContent).toBe("Information");
-    expect(dialog?.textContent).toContain("Process Test Process (TEST) loaded.");
+    expect(dialog?.textContent).toContain("Process Iodine Test (IODINE) loaded.");
     act(() => button("Confirm").click());
     expect(onConfirm).toHaveBeenCalled();
     show(<InformationModal reply={undefined} onConfirm={onConfirm} />);

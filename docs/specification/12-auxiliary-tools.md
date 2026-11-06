@@ -31,6 +31,6 @@ tool had its own copy of pin numbers / sensor code).
 ## Legacy tests (for reference)
 
 The legacy "unit tests" were manual, endless-running programs, not assertions:
-`MashEngineTest` (runs the fixture recipe of [07 §7.4](07-recipes.md) forever in simulation)
+`MashEngineTest` (runs the fixture recipe of [07 §7.5](07-recipes.md) forever in simulation)
 and `RaspberryPiHardswareControllerTest` (prints temperatures forever). They are
 superseded by [11 — Acceptance Criteria](11-acceptance-criteria.md).

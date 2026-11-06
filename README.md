@@ -116,8 +116,8 @@ whole application, e.g. `60` runs a 10-minute rest in 10 seconds. Beeps play on 
 if `paplay`, `aplay`, `afplay` or Windows sound is available, otherwise they are only logged.
 
 The recipes come from the directory `recipes/` next to the configuration file (`recipes.directory`), one file per
-recipe: `recipes/ZORA.json` holds the recipe `ZORA`, and the file name is the recipe id. The UI lists the recipes
-sorted by id. If the directory does not exist, the application creates it with the 8 legacy recipes
+recipe: `recipes/BENIWEISS.json` holds the recipe `BENIWEISS`, and the file name is the recipe id. The UI lists the recipes
+sorted by id. If the directory does not exist, the application creates it with the 2 shipped recipes
 ([docs/specification/data/recipes/](docs/specification/data/recipes/)); recipes you delete there are not written
 again. A recipe file you add, change or remove shows up in every open UI within a second
 (`recipes.checkMilliseconds`), without a restart; a loaded process keeps its recipe. An invalid recipe file is
@@ -126,10 +126,36 @@ cannot be created or read stops the start, with exit code 3. Everything the appl
 group-writable, so the brewer can edit it as another user of the same group (on BrewberryPi OS: the share's
 `app` folder). The format of one file is
 [recipe.schema.json](docs/specification/data/recipe.schema.json); see [07-recipes.md](docs/specification/07-recipes.md).
+The goals are in the section `mashing_process`, so that recipe design information can be added next to it later:
+
+```json
+{
+  "version": 1,
+  "name": "Water Boiling",
+  "mashing_process": {
+    "goals": [
+      { "type": "HeatUpForHopsCooking" },
+      { "type": "CookWater", "minutes": 20, "name": "Cooking Water", "description": "Cooking water for 20min" }
+    ]
+  }
+}
+```
+
+Recipe files in the older format, with `goals` at the top level, are skipped, and the log says to move `goals` into
+`mashing_process`. To update them, do that in each file, or delete the recipe directory so that the next start
+writes the shipped recipes again (recipes of your own are then lost).
+
+`version` is the version of the recipe file format (a file without it is in version 1, today's format). A
+recipe file in a newer version than the application knows is skipped, and the log says to update the
+application. A file in an older version is migrated to the latest version and written back; the original is kept
+in the hidden folder `.backup` of the recipe directory (`<id>.v<old version>.json`). After going back to an older
+application version, put those copies back to use the recipes again. See
+[07-recipes.md §7.2.1](docs/specification/07-recipes.md).
+
 To write recipes, use the web editor at https://recipes.brewberrypi.org
 ([tinkerius/brewberrypi-recipeeditor](https://github.com/tinkerius/brewberrypi-recipeeditor)): it checks a recipe
-against this format, and you download the file (or keep it in your Google Drive) and copy it into the recipe
-directory.
+against this format and writes the latest version (it also converts files in the older format). Download the file
+(or keep it in your Google Drive) and copy it into the recipe directory.
 
 ### API
 
@@ -142,7 +168,7 @@ The server serves the web UI, a REST API and an event stream on one port (`serve
 
   ```sh
   curl http://brewberrypi.local:8080/api/process
-  curl -X PUT http://brewberrypi.local:8080/api/process -H 'Content-Type: application/json' -d '{"recipe": "Dummy"}'
+  curl -X PUT http://brewberrypi.local:8080/api/process -H 'Content-Type: application/json' -d '{"recipe": "WaterBoil"}'
   curl -X POST http://brewberrypi.local:8080/api/process/start -H 'Content-Type: application/json' -d '{}'
   ```
 

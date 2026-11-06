@@ -14,11 +14,11 @@ from brewberrypi.config import load_config
 from brewberrypi.engine import Engine
 from brewberrypi.hal.mock import MockHal
 from brewberrypi.notify import Notifier
-from brewberrypi.recipes import load_recipes
 from brewberrypi.web.app import create_app
+from recipe_fixtures import with_test_recipes
 
 CONFIG = load_config(Path(__file__).parents[1] / "docs" / "specification" / "data" / "config.example.json")
-CATALOGUE = load_recipes(CONFIG.recipes)
+CATALOGUE = with_test_recipes(CONFIG)
 
 
 class RecordingNotifier(Notifier):
@@ -80,7 +80,7 @@ def test_healthz_reports_version_and_engine_state() -> None:
         response = http.get("/healthz")
         assert response.status_code == 200
         assert response.json() == {"status": "ok", "version": __version__, "engine": "NoProcess"}
-        http.app.state.engine.load("TEST")  # type: ignore[attr-defined]
+        http.app.state.engine.load("IODINE")  # type: ignore[attr-defined]
         assert http.get("/healthz").json()["engine"] == "Loaded"
 
 
@@ -104,7 +104,7 @@ def test_NFR_022_shutdown_switches_everything_off() -> None:
     hal = MockHal(temperature=20.0)
     app = create_app(CONFIG, CATALOGUE, hal, ManualClock(), notifier=RecordingNotifier())
     with TestClient(app) as http:
-        assert http.put("/api/process", json={"recipe": "Dummy"}).status_code == 200
+        assert http.put("/api/process", json={"recipe": "DEMO"}).status_code == 200
         assert http.post("/api/process/start", json={}).status_code == 200
         for _ in range(100):  # the execution loop is its own task: wait for its first tick (ENG-022)
             if http.get("/api/hardware").json()["heatingstatus"] == 1.0:
@@ -126,7 +126,7 @@ async def test_watchdog_pings_while_alive_and_stops_when_the_engine_hangs() -> N
         await event_clock.advance(3)
         assert notifier.messages.count("WATCHDOG=1") == 4  # at 0, 1, 2, 3 s
         engine: Engine = app.state.engine
-        engine.load("Dummy")
+        engine.load("DEMO")
         engine.start()
         await clock.advance(1)
         await event_clock.advance(1)
@@ -150,7 +150,7 @@ async def test_engine_is_alive_unless_a_running_loop_is_gone_or_stalled() -> Non
     clock = ManualClock()
     engine = Engine(MockHal(clock, temperature=20.0), clock, CATALOGUE, CONFIG)
     assert engine.alive()  # no process
-    engine.load("Dummy")
+    engine.load("DEMO")
     engine.start()
     await clock.advance(30)
     assert engine.alive()  # ticking

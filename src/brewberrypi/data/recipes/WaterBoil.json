@@ -1,8 +1,11 @@
 {
   "$schema": "../recipe.schema.json",
+  "version": 1,
   "name": "Water Boiling",
-  "goals": [
-    { "type": "HeatUpForHopsCooking" },
-    { "type": "CookWater", "minutes": 20, "name": "Cooking Water", "description": "Cooking water for 20min" }
-  ]
+  "mashing_process": {
+    "goals": [
+      { "type": "HeatUpForHopsCooking" },
+      { "type": "CookWater", "minutes": 20, "name": "Cooking Water", "description": "Cooking water for 20min" }
+    ]
+  }
 }

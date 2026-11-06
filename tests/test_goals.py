@@ -106,10 +106,10 @@ def test_every_catalogue_goal_can_be_created(context: GoalContext) -> None:
     for recipe in catalogue:
         goals = [create_goal(definition, context) for definition in recipe.goals]
         assert len(goals) == len(recipe.goals)
-    zora = catalogue.get("ZORA")
-    assert zora is not None
-    rest = create_goal(zora.goals[4], context)
-    assert (rest.name, rest.description) == ("Maltoserast", "Maltoserast @50 for 25min")
+    beniweiss = catalogue.get("BENIWEISS")
+    assert beniweiss is not None
+    rest = create_goal(beniweiss.goals[4], context)
+    assert (rest.name, rest.description) == ("Eiweißrast", "Eiweißrast @52 for 30min")
 
 
 def test_DOM_011_every_creation_is_a_fresh_instance(context: GoalContext) -> None:

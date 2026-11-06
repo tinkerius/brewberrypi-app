@@ -109,7 +109,7 @@
       "additionalProperties": false
     },
     "RecipeDetail": {
-      "description": "GET /api/recipes/{id}: the recipe with its goals as in its recipe file (spec 7.2).",
+      "description": "GET /api/recipes/{id}: the recipe with its goals as in its recipe file's mashing_process (spec 7.2, 7.3).",
       "type": "object",
       "required": ["id", "name", "goals"],
       "properties": {

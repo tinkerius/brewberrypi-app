@@ -85,7 +85,7 @@ def ui_settings(config: Config) -> dict[str, Any]:
 
 
 def recipe_detail(recipe: Recipe) -> dict[str, Any]:
-    """IF-031: one recipe with its goals as written in its recipe file (spec 7.2)."""
+    """IF-031: one recipe with its goals as written in its recipe file's `mashing_process` (spec 7.2, 7.3)."""
     goals = [
         {key: value for key, value in asdict(goal).items() if value is not None} for goal in recipe.goals
     ]

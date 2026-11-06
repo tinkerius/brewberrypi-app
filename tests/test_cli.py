@@ -50,9 +50,9 @@ def test_AC_084_AC_086_first_start_writes_the_config_file_and_the_recipes(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     assert main(["--dummymode", "--config", "config.json"]) == EXIT_OK
-    assert "recipes: BENIWEISS, Dummy, HANCOCK, HIPA, TEST, WIT, WaterBoil, ZORA" in capsys.readouterr().out
+    assert "recipes: BENIWEISS, WaterBoil" in capsys.readouterr().out
     assert sorted(path.name for path in tmp_path.iterdir()) == ["config.json", "recipes"]
-    assert len(list((tmp_path / "recipes").iterdir())) == 8
+    assert len(list((tmp_path / "recipes").iterdir())) == 2
 
 
 def test_log_lines_have_timestamp_level_and_component(capsys: pytest.CaptureFixture[str]) -> None:
@@ -73,9 +73,11 @@ def test_AC_081_invalid_recipe_file_is_skipped_and_logged(
 ) -> None:
     (tmp_path / "recipes").mkdir()
     (tmp_path / "recipes" / "R.json").write_text(
-        json.dumps({"name": "r", "goals": [{"type": "Rest", "temperature": 62}]})
+        json.dumps({"name": "r", "mashing_process": {"goals": [{"type": "Rest", "temperature": 62}]}})
     )
-    (tmp_path / "recipes" / "S.json").write_text(json.dumps({"name": "s", "goals": [{"type": "MashIn"}]}))
+    (tmp_path / "recipes" / "S.json").write_text(
+        json.dumps({"name": "s", "mashing_process": {"goals": [{"type": "MashIn"}]}})
+    )
     assert main(["--dummymode"]) == EXIT_OK
     output = capsys.readouterr().out
     assert "ERROR brewberrypi.recipes: invalid recipe file, recipe skipped:" in output
