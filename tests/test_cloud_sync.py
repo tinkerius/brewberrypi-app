@@ -252,6 +252,21 @@ async def test_AC_110_a_revoked_sign_in_disconnects(
     assert recipes(tmp_path) == {"WATER.json": WATER}
 
 
+async def test_IF_090_every_status_change_is_reported_at_once_also_the_start_of_a_sync(
+    tmp_path: Path, clock: ManualClock, cloud: FakeCloud
+) -> None:
+    store_credentials(tmp_path)
+    sync = cloud_sync(cloud, tmp_path, clock)
+    seen: list[str] = []
+    sync.on_status_changed = lambda: seen.append(sync.state)
+    task = asyncio.create_task(sync.run())
+    await clock.advance(0)
+    await clock.advance(30)
+    task.cancel()
+    await asyncio.gather(task, return_exceptions=True)
+    assert seen == ["syncing", "idle", "syncing", "idle"]
+
+
 # --- the mirror (SYNC-011..016) ---
 
 

@@ -2,7 +2,7 @@
 
 Cloud Sync ([spec 14](../specification/14-cloud-sync.md), [ADR-0003](../adr/0003-cloud-sync.md)) signs in to
 Google Drive with an OAuth client of type *TVs and Limited Input devices*. Until that client exists, the
-application has no client id and Cloud Sync is unavailable: the UI shows no Cloud Sync panel.
+application has no client id and Cloud Sync is unavailable: the UI shows no Cloud Sync control in the top bar.
 
 The client must be in the **same Google Cloud project as the recipe editor** (its `docs/google-setup.md`): with
 the scope `drive.file`, Google shows an application only the files of its own project, and the recipe editor
@@ -63,10 +63,10 @@ To replace the secret, change it in the Actions settings and release a new versi
 
 ADR-0003 relies on two facts that could not be checked when it was written. Check them with the new client:
 
-1. **Connect** works: the Cloud Sync panel shows a code, and after entering it at google.com/device the panel
+1. **Connect** works: the Cloud Sync menu in the top bar shows a code, and after entering it at google.com/device the panel
    says `Connected to Google Drive (<account>)`. If Google refuses the scope `drive.file` for this client type,
    the sign-in fails at once with an error from Google.
 2. **The device sees the editor's recipes**: save a recipe in the editor with the same Google account; after
-   *Sync now* it is in the recipe list. If the panel says `The folder BrewberryPi/recipes was not found in
+   *Sync now* it is in the recipe list. If the menu says `The folder BrewberryPi/recipes was not found in
    Google Drive` although the editor shows recipes, Google does not share `drive.file` grants between the clients
    of one project, and ADR-0003 has to be revisited.

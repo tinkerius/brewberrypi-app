@@ -16,10 +16,16 @@ export const DEVICE_LINK_TEXT = "Device settings";
 
 /** UI-001: the top bar with the BrewberryPi logo (frontend/BRAND.md); host and version once known.
  * UI-002: a link to the device web interface, when one is configured. */
-export function PageHeader(props: { host: string; version: string | null; deviceUrl?: string | null }) {
+export function PageHeader(props: {
+  host: string;
+  version: string | null;
+  deviceUrl?: string | null;
+  /** UI-080: the Cloud Sync control, at the right end before the device link. */
+  children?: preact.ComponentChildren;
+}) {
   const info = [props.host, props.version].filter((part) => part).join(" · ");
   return (
-    <header class="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-ink/10 bg-white px-4 py-3 dark:border-white/10 dark:bg-surface-dark">
+    <header class="relative flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-ink/10 bg-white px-4 py-3 dark:border-white/10 dark:bg-surface-dark">
       <h1>
         {/* The logo carries the name as outlines; the hidden text gives the heading its name. */}
         <picture>
@@ -29,16 +35,14 @@ export function PageHeader(props: { host: string; version: string | null; device
         <span class="sr-only">{APP_TITLE}</span>
       </h1>
       {info && <span class="text-stone-500 dark:text-stone-400">{info}</span>}
-      {props.deviceUrl && (
-        <a
-          href={props.deviceUrl}
-          target="_blank"
-          rel="noopener"
-          class="ml-auto text-sm font-medium text-berry hover:underline dark:text-berry-light"
-        >
-          {DEVICE_LINK_TEXT}
-        </a>
-      )}
+      <div class="ml-auto flex items-center gap-4">
+        {props.children}
+        {props.deviceUrl && (
+          <a href={props.deviceUrl} target="_blank" rel="noopener" class="text-sm font-medium text-berry hover:underline dark:text-berry-light">
+            {DEVICE_LINK_TEXT}
+          </a>
+        )}
+      </div>
     </header>
   );
 }

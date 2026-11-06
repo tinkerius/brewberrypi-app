@@ -129,7 +129,8 @@ Settings of the web UI from the configuration (`Q-30`), read by the UI on every 
 
 ### `IF-090` CloudSyncStatus `[NEW]`
 
-The state of Cloud Sync ([14](14-cloud-sync.md), `Q-35`).
+The state of Cloud Sync ([14](14-cloud-sync.md), `Q-35`). Besides the regular check (`IF-072`), every change of
+it is pushed at once, also the start of a sync, which is often over before the next check (`UI-085`).
 
 ```json
 {

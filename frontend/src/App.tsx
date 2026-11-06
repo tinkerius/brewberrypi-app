@@ -3,7 +3,7 @@
 import { useEffect, useState } from "preact/hooks";
 import { Chart } from "./Chart";
 import { deviceUrl, fetchDeviceLink, fetchVersion, sendCommand } from "./api";
-import { CloudSyncPanel, ConnectCloudSync } from "./cloudSync";
+import { CloudSyncHeader, ConnectCloudSync } from "./cloudSync";
 import { InformationModal, StopConfirmation } from "./dialogs";
 import { EventStream } from "./events";
 import { ConnectionIndicator, HardwareStatusPanel, PageHeader, Panel, ProcessPanel, type SendCommand } from "./panels";
@@ -56,7 +56,14 @@ export function App() {
         host={location.hostname}
         version={version}
         deviceUrl={deviceLink === null ? null : deviceUrl(deviceLink, location.hostname)}
-      />
+      >
+        <CloudSyncHeader
+          status={state.cloudSync}
+          connected={state.connected}
+          send={send}
+          onConnect={() => setConfirmingConnect(true)}
+        />
+      </PageHeader>
       <main class="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6">
         <ConnectionIndicator connected={state.connected} everConnected={everConnected} />
         <HardwareStatusPanel hardware={state.hardware} state={state.process?.state} stale={!state.connected} />
@@ -69,12 +76,6 @@ export function App() {
           connected={state.connected}
           send={send}
           onStop={() => setConfirmingStop(true)}
-        />
-        <CloudSyncPanel
-          status={state.cloudSync}
-          connected={state.connected}
-          send={send}
-          onConnect={() => setConfirmingConnect(true)}
         />
       </main>
       <StopConfirmation

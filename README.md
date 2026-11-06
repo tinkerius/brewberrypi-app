@@ -166,7 +166,7 @@ Cloud Sync mirrors the recipes from your Google Drive, where the recipe editor s
 `BrewberryPi/recipes`), into the recipe directory: one way, from the cloud to the device; see
 [14-cloud-sync.md](docs/specification/14-cloud-sync.md) and [ADR-0003](docs/adr/0003-cloud-sync.md).
 
-- **Connect:** the *Cloud Sync* panel of the UI, *Connect Google Drive*. The device shows a code; open
+- **Connect:** the cloud pictogram in the UI's top bar, *Connect Google Drive*. The device shows a code; open
   `https://www.google.com/device` on your phone or PC, enter the code and allow access. The device never writes
   to your Drive, and it only sees the files of the recipe editor (`drive.file`).
 - **While connected, the recipe directory is a copy of the Drive folder.** A recipe saved in the editor is on the
@@ -183,7 +183,7 @@ Cloud Sync mirrors the recipes from your Google Drive, where the recipe editor s
 - `cloudSync.enabled: false` turns Cloud Sync off. It also needs the application's Google client: release
   images have it built in (from the repository's Actions settings `GOOGLE_DRIVE_CLIENT_ID` and
   `GOOGLE_DRIVE_CLIENT_SECRET`), or set `cloudSync.googleDrive.clientId` and `clientSecret`; without one, the
-  panel is not shown. See [docs/deployment/cloud-sync-google.md](docs/deployment/cloud-sync-google.md).
+  pictogram is not shown. See [docs/deployment/cloud-sync-google.md](docs/deployment/cloud-sync-google.md).
 
 ### API
 

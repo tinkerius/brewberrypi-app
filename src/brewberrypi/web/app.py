@@ -85,13 +85,7 @@ def create_app(  # noqa: PLR0913  (clocks and UI folder are injectable for tests
             event_clock=event_clock,
             cloud_sync=sync,
         )
-
-        def recipes_synced() -> None:
-            """Cloud Sync changed recipe files: show the new recipe list at once (RCP-006, SYNC-011)."""
-            if library.refresh():
-                hub.check()
-
-        sync.on_recipes_changed = recipes_synced
+        _push_cloud_sync_changes(sync, library, hub)
         app.state.engine, app.state.hub, app.state.chart, app.state.cloud_sync = engine, hub, chart, sync
         app.state.hal, app.state.recipes, app.state.config = hal, library, config
         loop = asyncio.get_running_loop()
@@ -334,6 +328,18 @@ def _event_hub(  # noqa: PLR0913
         chart_seconds=config.chart.sample_milliseconds / 1000,
         heartbeat_seconds=config.events.heartbeat_milliseconds / 1000,
     )
+
+
+def _push_cloud_sync_changes(sync: CloudSync, library: RecipeLibrary, hub: EventHub) -> None:
+    """Changes by Cloud Sync reach every client at once: the recipe list (RCP-006, SYNC-011) and its status,
+    also the start of a sync (IF-090)."""
+
+    def recipes_synced() -> None:
+        if library.refresh():
+            hub.check()
+
+    sync.on_recipes_changed = recipes_synced
+    sync.on_status_changed = hub.check
 
 
 async def _watch_recipes(library: RecipeLibrary, hub: EventHub, clock: Clock, interval: float) -> None:
