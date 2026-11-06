@@ -91,6 +91,22 @@ def test_AC_031_unknown_recipe_or_missing_parameter_is_rejected(engine: Engine) 
     assert engine.process.process_id == "WaterBoil"  # state unchanged
 
 
+async def test_AC_100_a_recipe_without_goals_cannot_be_loaded(hal: MockHal, clock: ManualClock) -> None:
+    empty = parse_recipe("Draft", '{"version": 2, "name": "Draft", "mashing_process": {"goals": []}}', "test")
+    catalogue = RecipeCatalogue(recipes=(*CATALOGUE.recipes, empty), source="test")
+    engine = Engine(hal, clock, catalogue, CONFIG)
+    try:
+        reply = engine.load("Draft")
+        assert (reply, reply.error) == (Reply(False, "Recipe Draft (Draft) has no goals."), "conflict")
+        assert state(engine) == "NoProcess"
+        engine.load("WaterBoil")
+        assert engine.load("Draft").success is False
+        assert engine.process is not None
+        assert engine.process.process_id == "WaterBoil"  # a loaded process stays loaded
+    finally:
+        await engine.shutdown()
+
+
 def test_load_replaces_a_loaded_process(engine: Engine) -> None:
     engine.load("BENIWEISS")
     assert engine.load("IODINE").success
