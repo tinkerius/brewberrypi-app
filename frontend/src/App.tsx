@@ -3,6 +3,7 @@
 import { useEffect, useState } from "preact/hooks";
 import { Chart } from "./Chart";
 import { deviceUrl, fetchDeviceLink, fetchVersion, sendCommand } from "./api";
+import { CloudSyncPanel, ConnectCloudSync } from "./cloudSync";
 import { InformationModal, StopConfirmation } from "./dialogs";
 import { EventStream } from "./events";
 import { ConnectionIndicator, HardwareStatusPanel, PageHeader, Panel, ProcessPanel, type SendCommand } from "./panels";
@@ -12,6 +13,7 @@ export function App() {
   const [state, setState] = useState<AppState>(initialState);
   const [everConnected, setEverConnected] = useState(false);
   const [confirmingStop, setConfirmingStop] = useState(false);
+  const [confirmingConnect, setConfirmingConnect] = useState(false);
   const [version, setVersion] = useState<string | null>(null);
   const [deviceLink, setDeviceLink] = useState<string | null>(null);
   useEffect(() => {
@@ -68,6 +70,12 @@ export function App() {
           send={send}
           onStop={() => setConfirmingStop(true)}
         />
+        <CloudSyncPanel
+          status={state.cloudSync}
+          connected={state.connected}
+          send={send}
+          onConnect={() => setConfirmingConnect(true)}
+        />
       </main>
       <StopConfirmation
         open={confirmingStop}
@@ -75,6 +83,15 @@ export function App() {
         onStop={() => {
           setConfirmingStop(false);
           send("stop");
+        }}
+      />
+      <ConnectCloudSync
+        open={confirmingConnect}
+        provider={state.cloudSync?.provider ?? ""}
+        onCancel={() => setConfirmingConnect(false)}
+        onConnect={() => {
+          setConfirmingConnect(false);
+          send("cloudSyncConnect");
         }}
       />
       <InformationModal reply={state.replies[0]} onConfirm={() => setState(dismissReply)} />

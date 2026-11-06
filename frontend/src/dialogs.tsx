@@ -1,9 +1,9 @@
-/** Modal dialogs: Information (UI-050) and the stop confirmation (UI-043). */
+/** Modal dialogs: Information (UI-050) and the stop confirmation (UI-043); Cloud Sync's is in cloudSync.tsx. */
 
 import type { CommandReply } from "./types";
 import { BUTTON_STYLES, TITLE_STYLE } from "./ui";
 
-function Modal(props: { title: string; children: preact.ComponentChildren; buttons: preact.ComponentChildren }) {
+export function Modal(props: { title: string; children: preact.ComponentChildren; buttons: preact.ComponentChildren }) {
   return (
     <div class="fixed inset-0 z-20 flex items-start justify-center bg-ink/50 p-4 pt-20 backdrop-blur-xs">
       <div

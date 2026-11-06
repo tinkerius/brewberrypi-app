@@ -13,6 +13,7 @@ from typing import Any
 
 import fastjsonschema
 
+from brewberrypi.cloud_sync import CloudSync
 from brewberrypi.config import Config
 from brewberrypi.engine import Engine, ErrorKind, Reply
 from brewberrypi.goals import Goal
@@ -143,3 +144,38 @@ def _run(engine: Engine, command: str, body: dict[str, Any], request_id: str | N
         "stop": engine.stop,
     }
     return actions[command]()
+
+
+# --- Cloud Sync (spec 14) ---
+
+CLOUD_SYNC_COMMANDS: dict[str, str] = {
+    "connect": "cloudSyncConnect",
+    "disconnect": "cloudSyncDisconnect",
+    "sync": "cloudSyncNow",
+}
+"""Path segment of `POST /api/cloud-sync/<segment>` -> command name (IF-091)."""
+
+
+def cloud_sync_status(sync: CloudSync) -> dict[str, Any]:
+    """CloudSyncStatus (IF-090)."""
+    return sync.status()
+
+
+def run_cloud_sync_command(sync: CloudSync, command: str, body: Any) -> tuple[int, dict[str, Any]]:
+    """Run a Cloud Sync command (SYNC-030); return the HTTP status and the CommandReply (IF-050, IF-091)."""
+    try:
+        _EMPTY(body if body is not None else {})
+    except fastjsonschema.JsonSchemaValueException as error:
+        message: str = error.message
+        reply = Reply(False, f"Invalid {command} command: {message.removeprefix('data ')}", "invalid")
+    else:
+        actions: dict[str, Callable[[], Reply]] = {
+            "cloudSyncConnect": sync.connect,
+            "cloudSyncDisconnect": sync.disconnect,
+            "cloudSyncNow": sync.sync_now,
+        }
+        reply = actions[command]()
+    return _STATUS[reply.error], {"command": command, "success": reply.success, "message": reply.message}
+
+
+_EMPTY = validator("EmptyCommand")

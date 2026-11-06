@@ -26,6 +26,11 @@ Responsive (usable on phone, tablet and desktop). Language of UI texts: English
 │  └──────────────────────────────────────────────────────────┘ │
 │  [Load Process ▾] [Unload Process]                            │
 │  [Start Process] [Pause Process] [Stop Process]               │
+├──────────────────────────────────────────────────────────────┤
+│ [Cloud Sync]          (only when available, UI-080)           │
+│  Connected to Google Drive (brewer@example.com).              │
+│  Last sync: 14:32:05                                          │
+│  [Sync now] [Disconnect]                                      │
 └──────────────────────────────────────────────────────────────┘
           (modal "Information" with [Confirm] for replies)
 ```
@@ -103,3 +108,25 @@ with blue headers and a dark navbar titled **Brewberry Pi**.)
 ## 9.8 Assets
 
 - `UI-070` The UI MUST work without internet access (all scripts, styles and fonts are served locally by the Pi). The legacy page referenced two CDN scripts only for IE < 9; these are not required.
+
+## 9.9 Cloud Sync panel `[NEW]`
+
+The panel for Cloud Sync ([14](14-cloud-sync.md), `Q-35`), below the Brewing Process panel. Its content follows the
+`cloudSync` status (`IF-090`).
+
+- `UI-080` The panel, titled `Cloud Sync`, is shown only when the state is not `unavailable` (`SYNC-001`).
+- `UI-081` `disconnected`: the text `Off. Connect to mirror the recipes from your Google Drive, where the recipe
+  editor saves them.` and a button `Connect Google Drive`. The button first opens a dialog titled `Connect Google
+  Drive` with the text `The recipes on this device will be replaced by the recipes in your Google Drive. Recipes
+  that are only on this device are moved to recipes/.backup. Changes made on the device are overwritten while
+  Cloud Sync is on.` and the buttons `Connect` (sends `cloudSyncConnect`) and `Cancel`.
+- `UI-082` `connecting`: the text `Open <url> and enter this code:`, where `<url>` is a link opened in a new tab,
+  then the code in large letters, then `The code expires at <time>.` and a button `Cancel` (sends
+  `cloudSyncDisconnect`).
+- `UI-083` Connected (`idle`, `syncing`, `offline`, `error`): the text `Connected to Google Drive (<account>).`,
+  then `Last sync: <time>` (`never` before the first one; `syncing…` during one), and the buttons `Sync now`
+  (`cloudSyncNow`) and `Disconnect` (`cloudSyncDisconnect`). The issues (`SYNC-013`) are listed under the heading
+  `Not synced`, one line `<recipe>: <message>` each.
+- `UI-084` A `message` (`IF-090`) is shown in the panel as an alert in every state. Times are shown in the
+  browser's local time (`HH:MM:SS`). The replies of the Cloud Sync commands appear like every reply (`UI-050`).
+

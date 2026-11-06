@@ -28,6 +28,7 @@
 | 11 | [Acceptance Criteria](11-acceptance-criteria.md) | Testable Given/When/Then scenarios |
 | 12 | [Auxiliary Tools](12-auxiliary-tools.md) | Temperature logger, GPIO smoke test, sensor test |
 | 13 | [Open Questions](13-open-questions.md) | Decisions still to be confirmed by the product owner |
+| 14 | [Cloud Sync](14-cloud-sync.md) | One-way mirror of the recipes from the brewer's cloud storage (Google Drive) |
 
 ## Reference data (machine-readable)
 
@@ -57,5 +58,6 @@
 | `NFR` | Non-functional | 10 |
 | `AC` | Acceptance criteria | 11 |
 | `TOOL` | Auxiliary tools | 12 |
+| `SYNC` | Cloud Sync | 14 |
 
 Keywords **MUST**, **MUST NOT**, **SHOULD**, **MAY** are used as in RFC 2119.

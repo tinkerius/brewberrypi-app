@@ -58,5 +58,13 @@
     "heatingRatePerSecond": 0.085,
     "coolingRatePerSecond": 0.005,
     "maxTemperature": 100.0
+  },
+  "cloudSync": {
+    "enabled": true,
+    "intervalSeconds": 30,
+    "googleDrive": {
+      "clientId": "",
+      "clientSecret": ""
+    }
   }
 }

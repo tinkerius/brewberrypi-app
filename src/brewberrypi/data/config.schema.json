@@ -117,6 +117,24 @@
         "maxTemperature": { "type": "number", "default": 100.0 }
       },
       "additionalProperties": false
+    },
+    "cloudSync": {
+      "type": "object",
+      "description": "Cloud Sync: one-way mirror of the recipes from the brewer's cloud storage (spec 14)",
+      "properties": {
+        "enabled": { "type": "boolean", "default": true, "description": "false: Cloud Sync is unavailable (SYNC-001)" },
+        "intervalSeconds": { "type": "integer", "minimum": 10, "default": 30, "description": "Time between syncs (SYNC-020)" },
+        "googleDrive": {
+          "type": "object",
+          "description": "The OAuth client for Google Drive; empty: the one built into the application (SYNC-001)",
+          "properties": {
+            "clientId": { "type": "string", "default": "" },
+            "clientSecret": { "type": "string", "default": "" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false,

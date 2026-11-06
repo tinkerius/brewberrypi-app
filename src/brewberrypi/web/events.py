@@ -2,9 +2,9 @@
 
 A new stream first gets a `snapshot` with the whole state (IF-071). After that the hub pushes:
 
-- `hardware`, `process`, `recipes`: the full payload, only when it changed (IF-072). The hub checks every
-  `events.checkMilliseconds`, and at once after every command, so a command's effect reaches all clients
-  before its HTTP reply is sent;
+- `hardware`, `process`, `recipes`, `cloudSync`: the full payload, only when it changed (IF-072). The hub
+  checks every `events.checkMilliseconds`, and at once after every command, so a command's effect reaches all
+  clients before its HTTP reply is sent;
 - `chart`: one ChartUpdate per chart sample that added a point (IF-073);
 - `ping`: every `events.heartbeatMilliseconds`, so clients notice a dead connection (IF-074).
 
@@ -24,7 +24,7 @@ from brewberrypi.clock import Clock
 
 log = logging.getLogger(__name__)
 
-STATE_EVENTS = ("hardware", "process", "recipes")
+STATE_EVENTS = ("hardware", "process", "recipes", "cloudSync")
 COALESCED = (*STATE_EVENTS, "ping")
 MAX_BACKLOG = 100
 """Pending events after which a stream is ended (it reconnects and starts over with a snapshot)."""

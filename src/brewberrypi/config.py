@@ -116,6 +116,20 @@ class SimulationConfig:
 
 
 @dataclass(frozen=True)
+class CloudSyncConfig:
+    """Cloud Sync (spec 14)."""
+
+    enabled: bool
+    interval_seconds: int
+    """Time between syncs (SYNC-020)."""
+    google_drive_client_id: str
+    """Empty: the client built into the application (SYNC-001)."""
+    google_drive_client_secret: str
+    state_directory: Path
+    """Where the sign-in is stored: the configuration file's directory (SYNC-004)."""
+
+
+@dataclass(frozen=True)
 class Config:
     source: Path
     """The file the configuration was read from."""
@@ -128,6 +142,7 @@ class Config:
     events: EventsConfig
     chart: ChartConfig
     simulation: SimulationConfig
+    cloud_sync: CloudSyncConfig
 
 
 def load_config(path: Path | None = None, *, cwd: Path | None = None) -> Config:
@@ -186,6 +201,7 @@ def _build(raw: Any, *, source: Path, base_dir: Path) -> Config:
     hardware = section("hardware")
     heating, pump, buzzer, sensor = (hardware[k] for k in ("heating", "pump", "buzzer", "sensor"))
     control, events, simulation = section("control"), section("events"), section("simulation")
+    cloud_sync = section("cloudSync")
     return Config(
         source=source,
         server=ServerConfig(port=section("server")["port"]),
@@ -236,6 +252,13 @@ def _build(raw: Any, *, source: Path, base_dir: Path) -> Config:
             heating_rate_per_second=simulation["heatingRatePerSecond"],
             cooling_rate_per_second=simulation["coolingRatePerSecond"],
             max_temperature=simulation["maxTemperature"],
+        ),
+        cloud_sync=CloudSyncConfig(
+            enabled=cloud_sync["enabled"],
+            interval_seconds=cloud_sync["intervalSeconds"],
+            google_drive_client_id=cloud_sync["googleDrive"]["clientId"],
+            google_drive_client_secret=cloud_sync["googleDrive"]["clientSecret"],
+            state_directory=base_dir,
         ),
     )
 

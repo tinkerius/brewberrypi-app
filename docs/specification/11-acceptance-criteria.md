@@ -89,3 +89,23 @@ controllable/accelerated clock. `T` = temperature reported by the HAL.
 
 - `AC-090` Load the test recipe `DEMO` ([07](07-recipes.md) §7.5), start, answer all requests (`Yes` for iodine, `Confirm` for lautering) → process reaches `Finished`; chart shows the heat-up to 62, a hold at 62 for 10 (simulated) min, heat-up to 78, cool-down during lautering, heat-up to 97.
 - `AC-091` Full `BENIWEISS` run in simulation → all 11 goals `Done`, final state `Finished`, heater and pump off.
+
+## 11.9 Cloud Sync (`[NEW]`, [14](14-cloud-sync.md))
+
+The criteria use a fake provider: no network, a controllable clock, and a cloud folder the test fills.
+
+- `AC-102` (SYNC-002, SYNC-004, SYNC-016) `cloudSyncConnect` while disconnected → accepted, `Connecting to Google Drive.`; the status becomes `connecting` with the provider's code, address and expiry. Once the brewer allows access → `idle` with the account, `.cloud-sync/credentials.json` written, the notice file `DO-NOT-EDIT-Cloud-Sync.txt` written with the account in its text, and the recipe directory mirrors the cloud folder.
+- `AC-103` (SYNC-011) A recipe added or changed in the cloud → written to the recipe directory at the next sync; a sync without changes in the cloud downloads nothing and writes nothing (files unchanged, modification times unchanged).
+- `AC-104` (SYNC-011) A synced recipe file changed on the device → at the next sync it has the cloud content again and `.backup/<id>.local.json` holds the changed file. A synced recipe file deleted on the device → written again.
+- `AC-105` (SYNC-011) A recipe file with no cloud recipe (removed or renamed in the cloud, or added on the device) → moved to `.backup/<id>.removed.json`; other files, hidden files and subdirectories of the recipe directory are unchanged.
+- `AC-106` (SYNC-012, SYNC-013) A cloud file in format version 1 → written in the latest version, without a `.backup/<id>.v1.json` copy. A cloud file in a newer format version, an invalid one, one named `bad name.json`, and two files with the same name → none of them is on the device (an existing file of that id is moved to `.backup`), each is listed in `issues` with the message of `SYNC-013`; a file not ending in `.json` is ignored.
+- `AC-107` (SYNC-014) The provider cannot be reached → state `offline` with `Google Drive cannot be reached: …`; the cloud folder is missing → state `error` with the message of `SYNC-014`; a download fails after the listing → the recipe directory is unchanged in every case. An empty cloud folder that exists → every recipe file moved to `.backup`.
+- `AC-108` (SYNC-020, SYNC-021) Connected at startup → a sync runs without a new sign-in. Then a sync every `cloudSync.intervalSeconds`; `cloudSyncNow` → accepted, `Cloud Sync started.`, a sync at once. After failed syncs the waits are 30, 60, 120, 240, 300, 300 s (interval 30); after a successful one, 30 s again.
+- `AC-109` (SYNC-005) `cloudSyncDisconnect` → accepted, `Cloud Sync disconnected.`; the provider is asked to end the sign-in, the credentials file and the notice file are deleted, the recipe files stay; after a restart Cloud Sync is `disconnected` and the files are not changed.
+- `AC-110` (SYNC-006) The provider rejects the stored sign-in → `disconnected` with `Access to Google Drive was revoked. Connect again.`, credentials and notice file deleted, recipe files unchanged.
+- `AC-111` (SYNC-003) The sign-in code expires, the brewer denies access, or allows the account but not the files → `disconnected` with the message of `SYNC-003`; no credentials file and no change to the recipe directory.
+- `AC-112` (SYNC-030) The replies of `SYNC-030`: `cloudSyncConnect` while connected, `cloudSyncDisconnect` and `cloudSyncNow` while disconnected → conflict (HTTP 409) with their messages; every command while `unavailable` → conflict, `Cloud Sync is not available.`
+- `AC-113` (SYNC-001) `cloudSync.enabled` `false`, or no client id for the provider → state `unavailable`, no request to the provider, and the UI shows no Cloud Sync panel.
+- `AC-114` (SYNC-022, RCP-006) A process is loaded from a synced recipe, then the recipe changes in the cloud and is synced → the recipe list shows the new recipe, the loaded process keeps its goals; the sync never switches an output.
+- `AC-115` (SYNC-004) After connecting, syncing and disconnecting, the log contains no token, sign-in code or recipe content.
+- `AC-116` (IF-090, IF-091, UI-080..084) The `cloudSync` status is part of the snapshot and pushed when it changes. The UI shows the Cloud Sync panel for each state as in §9.9: the connect dialog with its text, the code and its link while connecting, account, last sync and issues while connected, and the message.

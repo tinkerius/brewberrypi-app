@@ -158,7 +158,31 @@ application version, put those copies back to use the recipes again. See
 To write recipes, use the web editor at https://recipes.brewberrypi.org
 ([tinkerius/brewberrypi-recipeeditor](https://github.com/tinkerius/brewberrypi-recipeeditor)): it checks a recipe
 against this format and writes the latest version (it also converts files in the older format). Download the file
-(or keep it in your Google Drive) and copy it into the recipe directory.
+(or keep it in your Google Drive) and copy it into the recipe directory, or let Cloud Sync do it.
+
+### Cloud Sync
+
+Cloud Sync mirrors the recipes from your Google Drive, where the recipe editor saves them (folder
+`BrewberryPi/recipes`), into the recipe directory: one way, from the cloud to the device; see
+[14-cloud-sync.md](docs/specification/14-cloud-sync.md) and [ADR-0003](docs/adr/0003-cloud-sync.md).
+
+- **Connect:** the *Cloud Sync* panel of the UI, *Connect Google Drive*. The device shows a code; open
+  `https://www.google.com/device` on your phone or PC, enter the code and allow access. The device never writes
+  to your Drive, and it only sees the files of the recipe editor (`drive.file`).
+- **While connected, the recipe directory is a copy of the Drive folder.** A recipe saved in the editor is on the
+  device within 30 seconds (`cloudSync.intervalSeconds`), or at once with *Sync now*. Changes made on the device
+  (for example over the file share) are overwritten, deleted files come back, and recipe files that are not in
+  Drive are moved away. Every file replaced or moved is kept in `recipes/.backup` (`<id>.local.json`,
+  `<id>.removed.json`). The file `DO-NOT-EDIT-Cloud-Sync.txt` in the recipe directory says so. Upload recipes
+  that exist only on the device in the editor before you connect.
+- **Disconnect** keeps the recipe files as ordinary files. If Google cannot be reached, nothing on the device
+  changes and the device brews with the recipes of the last sync.
+- The sign-in is stored in `.cloud-sync/credentials.json` next to `config.json` (on BrewberryPi OS that is in the
+  file share). It only gives access to the recipe editor's files; you can also revoke it at
+  https://myaccount.google.com/permissions.
+- `cloudSync.enabled: false` turns Cloud Sync off. It also needs the application's Google client (built in, or
+  `cloudSync.googleDrive.clientId` and `clientSecret`); without one, the panel is not shown. Setting up the
+  client: [docs/deployment/cloud-sync-google.md](docs/deployment/cloud-sync-google.md).
 
 ### API
 
@@ -177,9 +201,9 @@ The server serves the web UI, a REST API and an event stream on one port (`serve
 
   Also `GET /api/hardware`, `/api/recipes`, `/api/recipes/{id}`, `/api/chart`, `/api/ui`, `DELETE /api/process` (unload),
   `POST /api/process/pause|resume|stop`, and `POST /api/process/requests/{id}` with `{"response": "Yes"}` to
-  answer a question.
+  answer a question. Cloud Sync: `GET /api/cloud-sync`, `POST /api/cloud-sync/connect|disconnect|sync`.
 - **Server-sent events** at `GET /api/events` (`curl -N`): a `snapshot` first, then `hardware`, `process`,
-  `recipes` and `chart` only when they change, and a `ping` every 5 seconds.
+  `recipes`, `cloudSync` and `chart` only when they change, and a `ping` every 5 seconds.
 - Commands must be sent as JSON, and requests from other web pages are refused.
 
 ### Running as a service

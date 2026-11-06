@@ -3,6 +3,7 @@
 import type {
   ChartSeries,
   ChartUpdate,
+  CloudSyncStatus,
   CommandReply,
   EventName,
   HardwareStatus,
@@ -18,6 +19,8 @@ export interface AppState {
   process: ProcessState | null;
   recipes: Recipe[] | null;
   chart: ChartSeries[] | null;
+  /** IF-090; `null` until the first snapshot. */
+  cloudSync: CloudSyncStatus | null;
   /** Replies waiting to be shown in the Information modal, oldest first (UI-050). */
   replies: CommandReply[];
 }
@@ -28,6 +31,7 @@ export const initialState: AppState = {
   process: null,
   recipes: null,
   chart: null,
+  cloudSync: null,
   replies: [],
 };
 
@@ -41,6 +45,7 @@ export function receive(state: AppState, name: EventName, data: unknown): AppSta
         process: snapshot.process,
         recipes: snapshot.recipes,
         chart: snapshot.chart,
+        cloudSync: snapshot.cloudSync ?? null,
       };
     }
     case "hardware":
@@ -51,6 +56,8 @@ export function receive(state: AppState, name: EventName, data: unknown): AppSta
       return { ...state, recipes: data as Recipe[] };
     case "chart":
       return { ...state, chart: applyChartUpdate(state.chart, data as ChartUpdate) };
+    case "cloudSync":
+      return { ...state, cloudSync: data as CloudSyncStatus };
     default:
       return state; // ping
   }

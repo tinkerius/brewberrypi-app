@@ -27,6 +27,7 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 from brewberrypi import __version__
 from brewberrypi.chart import TemperatureChart
 from brewberrypi.clock import Clock, SystemClock
+from brewberrypi.cloud_sync import CloudSync, create_cloud_sync
 from brewberrypi.config import Config
 from brewberrypi.engine import Engine
 from brewberrypi.hal import Hal
@@ -34,10 +35,13 @@ from brewberrypi.notify import Notifier
 from brewberrypi.recipes import RecipeCatalogue, RecipeLibrary
 from brewberrypi.web.events import RETRY_MILLISECONDS, EventHub
 from brewberrypi.web.messages import (
+    CLOUD_SYNC_COMMANDS,
+    cloud_sync_status,
     hardware_status,
     process_state,
     recipe_detail,
     recipe_list,
+    run_cloud_sync_command,
     run_command,
     ui_settings,
 )
@@ -56,10 +60,11 @@ def create_app(  # noqa: PLR0913  (clocks and UI folder are injectable for tests
     event_clock: Clock | None = None,
     static_dir: Path = STATIC_DIR,
     notifier: Notifier | None = None,
+    cloud_sync: CloudSync | None = None,
 ) -> Starlette:
     """The application. `clock` drives the engine and the chart timestamps (scaled in simulation, HW-064);
-    `event_clock` paces the event stream and the recipe directory checks in real time. A plain
-    `RecipeCatalogue` is never read again."""
+    `event_clock` paces the event stream, the recipe directory checks and Cloud Sync in real time. A plain
+    `RecipeCatalogue` is never read again. `cloud_sync` replaces the one built from the configuration."""
     event_clock = SystemClock() if event_clock is None else event_clock
     library = recipes if isinstance(recipes, RecipeLibrary) else RecipeLibrary(recipes)
     notifier = Notifier() if notifier is None else notifier
@@ -69,16 +74,32 @@ def create_app(  # noqa: PLR0913  (clocks and UI folder are injectable for tests
         await hal.start()  # sensor loop, first reading (HW-030, HW-034); outputs are already off (HW-020)
         engine = Engine(hal, clock, library, config)
         chart = TemperatureChart(config.chart.max_points)
+        sync = cloud_sync or create_cloud_sync(config.cloud_sync, config.recipes.directory, event_clock)
         hub = _event_hub(
-            config, recipes=library, hal=hal, clock=clock, engine=engine, chart=chart, event_clock=event_clock
+            config,
+            recipes=library,
+            hal=hal,
+            clock=clock,
+            engine=engine,
+            chart=chart,
+            event_clock=event_clock,
+            cloud_sync=sync,
         )
-        app.state.engine, app.state.hub, app.state.chart = engine, hub, chart
+
+        def recipes_synced() -> None:
+            """Cloud Sync changed recipe files: show the new recipe list at once (RCP-006, SYNC-011)."""
+            if library.refresh():
+                hub.check()
+
+        sync.on_recipes_changed = recipes_synced
+        app.state.engine, app.state.hub, app.state.chart, app.state.cloud_sync = engine, hub, chart, sync
         app.state.hal, app.state.recipes, app.state.config = hal, library, config
         loop = asyncio.get_running_loop()
         app.state.close_streams = lambda: loop.call_soon_threadsafe(hub.close)  # for serve()'s signal handler
         events = asyncio.create_task(hub.run())
         watch = _watch_recipes(library, hub, event_clock, config.recipes.check_milliseconds / 1000)
-        background = [events, asyncio.create_task(watch)]
+        # Cloud Sync starts after the outputs are off (HAL created and started), without delaying startup.
+        background = [events, asyncio.create_task(watch), asyncio.create_task(sync.run())]
         if notifier.watchdog_seconds is not None:
 
             def alive() -> bool:
@@ -117,6 +138,8 @@ def create_app(  # noqa: PLR0913  (clocks and UI folder are injectable for tests
         Route("/api/recipes/{recipe_id:str}", _get_recipe, methods=["GET"]),
         Route("/api/chart", _get_chart, methods=["GET"]),
         Route("/api/ui", _get_ui, methods=["GET"]),
+        Route("/api/cloud-sync", _get_cloud_sync, methods=["GET"]),
+        Route("/api/cloud-sync/{command:str}", _cloud_sync_command, methods=["POST"]),
         Route("/api/events", _events, methods=["GET"]),
         Route("/healthz", _healthz),
     ]
@@ -167,6 +190,10 @@ async def _get_chart(request: Request) -> Response:
     return JSONResponse(chart.data(after))
 
 
+async def _get_cloud_sync(request: Request) -> Response:
+    return JSONResponse(cloud_sync_status(request.app.state.cloud_sync))
+
+
 # --- commands (spec 8.3) ---
 
 _POST_COMMANDS = ("start", "pause", "resume", "stop")
@@ -200,6 +227,23 @@ async def _run(request: Request, command: str, request_id: str | None = None) ->
         message = f"Invalid {command} command: body is not JSON"
         return JSONResponse({"command": command, "success": False, "message": message}, status_code=422)
     status, reply = run_command(request.app.state.engine, command, body, request_id)
+    hub: EventHub = request.app.state.hub
+    hub.check()
+    return JSONResponse(reply, status_code=status)
+
+
+async def _cloud_sync_command(request: Request) -> Response:
+    """IF-091: `POST /api/cloud-sync/connect|disconnect|sync`."""
+    command = CLOUD_SYNC_COMMANDS.get(request.path_params["command"])
+    if command is None:
+        return _error(f"Unknown command '{request.path_params['command']}'.", 404)
+    raw = await request.body()
+    try:
+        body: Any = json.loads(raw) if raw.strip() else None
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        message = f"Invalid {command} command: body is not JSON"
+        return JSONResponse({"command": command, "success": False, "message": message}, status_code=422)
+    status, reply = run_cloud_sync_command(request.app.state.cloud_sync, command, body)
     hub: EventHub = request.app.state.hub
     hub.check()
     return JSONResponse(reply, status_code=status)
@@ -273,6 +317,7 @@ def _event_hub(  # noqa: PLR0913
     engine: Engine,
     chart: TemperatureChart,
     event_clock: Clock,
+    cloud_sync: CloudSync,
 ) -> EventHub:
     """The event stream's sources (spec 8.4); chart timestamps come from the application clock."""
     return EventHub(
@@ -281,6 +326,7 @@ def _event_hub(  # noqa: PLR0913
             "hardware": lambda: hardware_status(hal),
             "process": lambda: process_state(engine),
             "recipes": lambda: recipe_list(recipes.catalogue),
+            "cloudSync": lambda: cloud_sync_status(cloud_sync),
         },
         chart.data,
         lambda: chart.sample(clock.wall_time(), hal.get_temperature()),
