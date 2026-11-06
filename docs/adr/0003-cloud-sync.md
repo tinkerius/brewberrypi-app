@@ -93,9 +93,11 @@ is left to when it is added.
 - An OAuth client of type *TVs and Limited Input devices* in the **same Google Cloud project as the editor**.
 - Scopes: `drive.file`, plus `openid email` for the account shown in the UI. All three are non-sensitive.
 - Google does not treat the client secret of such a client as confidential, so it is built into the
-  application (`google_drive.BUILT_IN_CLIENT_ID`, `BUILT_IN_CLIENT_SECRET`). `cloudSync.googleDrive.clientId`
-  and `clientSecret` in `config.json` override it for own builds. **Until the client is created, the built-in
-  id is empty and Cloud Sync is unavailable** (`SYNC-001`).
+  application. It is not kept in git, though: the release build writes it into the package from the
+  repository's Actions settings (`GOOGLE_DRIVE_CLIENT_ID`, `GOOGLE_DRIVE_CLIENT_SECRET`; amended 2026-11-06,
+  see [deployment/cloud-sync-google.md](../deployment/cloud-sync-google.md)). `cloudSync.googleDrive.clientId`
+  and `clientSecret` in `config.json` replace it. A build without a client has Cloud Sync unavailable
+  (`SYNC-001`).
 - Google lets the brewer untick single scopes. A sign-in without `drive.file` is refused with
   `Access to Google Drive files was not allowed. Connect again and allow it.`
 
@@ -190,8 +192,8 @@ A secrets mount outside the share would need runtime contract version 3 in both 
   - The app talks to the internet for the first time. The privacy notes of the editor should say that the
     device reads the Drive folder.
 - Follow-ups:
-  - Create the Google client and put its id and secret into `google_drive.py`
-    ([deployment/cloud-sync-google.md](../deployment/cloud-sync-google.md)), then check the two facts above.
+  - Check the two facts above with the real client
+    ([deployment/cloud-sync-google.md](../deployment/cloud-sync-google.md)).
   - Recipe editor:
     - help text "Your BrewberryPi picks up saved recipes within 30 seconds (Cloud Sync)";
     - keep the Drive layout stable (already a rule there);

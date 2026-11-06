@@ -3,7 +3,8 @@
 Cloud Sync keeps the recipe directory (`RCP-001`) a copy of a folder in the brewer's cloud storage, where the
 recipe editor (https://recipes.brewberrypi.org) saves recipes (`Q-35`). It works **one way**: from the cloud to
 the device. The device never writes to the cloud. The only provider so far is **Google Drive**. The technical
-design, including how a provider signs in, is in [ADR-0003](../adr/0003-cloud-sync.md).
+design, including how a provider signs in, is in [ADR-0003](../adr/0003-cloud-sync.md). The UI shows Cloud Sync in its
+top bar ([09](09-user-interface.md) §9.9).
 
 Cloud Sync is optional and off until the brewer connects it. Brewing never depends on it: a process runs the same
 with or without a network.

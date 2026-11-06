@@ -3,6 +3,8 @@
 import asyncio
 import json
 import logging
+import subprocess
+import sys
 from collections.abc import AsyncIterator, Awaitable, Callable
 from pathlib import Path
 
@@ -10,6 +12,7 @@ import pytest
 
 from brewberrypi.clock import ManualClock
 from brewberrypi.cloud_sync import create_cloud_sync
+from brewberrypi.cloud_sync.google_drive import built_in_client
 from brewberrypi.cloud_sync.service import (
     CREDENTIALS_FILE,
     NOTICE_FILE,
@@ -247,6 +250,21 @@ async def test_AC_110_a_revoked_sign_in_disconnects(
     )
     assert not (tmp_path / STATE_DIRECTORY / CREDENTIALS_FILE).exists()
     assert recipes(tmp_path) == {"WATER.json": WATER}
+
+
+async def test_IF_090_every_status_change_is_reported_at_once_also_the_start_of_a_sync(
+    tmp_path: Path, clock: ManualClock, cloud: FakeCloud
+) -> None:
+    store_credentials(tmp_path)
+    sync = cloud_sync(cloud, tmp_path, clock)
+    seen: list[str] = []
+    sync.on_status_changed = lambda: seen.append(sync.state)
+    task = asyncio.create_task(sync.run())
+    await clock.advance(0)
+    await clock.advance(30)
+    task.cancel()
+    await asyncio.gather(task, return_exceptions=True)
+    assert seen == ["syncing", "idle", "syncing", "idle"]
 
 
 # --- the mirror (SYNC-011..016) ---
@@ -582,3 +600,64 @@ async def test_AC_115_the_log_has_no_token_code_or_recipe_content(
     for secret in (REFRESH_TOKEN, USER_CODE, DEVICE_CODE, "Secret Recipe Name"):
         assert secret not in text
     assert "Cloud Sync" in text
+
+
+# --- the built-in Google client (docs/deployment/cloud-sync-google.md) ---
+
+
+def test_SYNC_001_the_built_in_client_is_read_from_the_package(tmp_path: Path) -> None:
+    file = tmp_path / "google-drive-client.json"
+    assert built_in_client(file) == ("", "")  # not built in
+    file.write_text(json.dumps({"clientId": "id.apps.googleusercontent.com", "clientSecret": "GOCSPX-x"}))
+    assert built_in_client(file) == ("id.apps.googleusercontent.com", "GOCSPX-x")
+    file.write_text("{")
+    assert built_in_client(file) == ("", "")
+
+
+def test_SYNC_001_a_built_in_client_makes_cloud_sync_available_and_the_config_replaces_it(
+    tmp_path: Path, clock: ManualClock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import brewberrypi.cloud_sync as cloud_sync_package  # noqa: PLC0415
+
+    monkeypatch.setattr(cloud_sync_package, "built_in_client", lambda: ("built-in-id", "built-in-secret"))
+    (tmp_path / "config.json").write_text("{}")
+    config = load_config(tmp_path / "config.json")
+    sync = create_cloud_sync(config.cloud_sync, config.recipes.directory, clock)
+    assert sync.state == "disconnected"
+    assert sync._provider._client_id == "built-in-id"  # type: ignore[union-attr]
+    (tmp_path / "config.json").write_text(
+        json.dumps({"cloudSync": {"googleDrive": {"clientId": "own", "clientSecret": "s"}}})
+    )
+    config = load_config(tmp_path / "config.json")
+    sync = create_cloud_sync(config.cloud_sync, config.recipes.directory, clock)
+    assert (sync._provider._client_id, sync._provider._client_secret) == ("own", "s")  # type: ignore[union-attr]
+
+
+@pytest.mark.parametrize(
+    ("secrets", "written", "code"),
+    [
+        ({"google_drive_client_id": "id\n", "google_drive_client_secret": "GOCSPX-x\n"}, True, 0),
+        ({}, False, 0),
+        ({"google_drive_client_id": "id"}, False, 1),
+    ],
+)
+def test_the_release_build_writes_the_client_from_its_build_secrets(
+    tmp_path: Path, secrets: dict[str, str], written: bool, code: int
+) -> None:
+    script = Path(__file__).parents[1] / "scripts" / "google-drive-client.py"
+    directory = tmp_path / "secrets"
+    directory.mkdir()
+    for name, value in secrets.items():
+        (directory / name).write_text(value)
+    output = tmp_path / "google-drive-client.json"
+    result = subprocess.run(
+        [sys.executable, str(script), str(directory), str(output)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == code
+    assert output.exists() == written
+    assert "GOCSPX" not in result.stdout + result.stderr
+    if written:
+        assert built_in_client(output) == ("id", "GOCSPX-x")

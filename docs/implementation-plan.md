@@ -18,7 +18,7 @@ criteria green. Tick the boxes as milestones are completed.
 | M10 | **Startup/shutdown, logging, runtime contract (application side)** — startup order, signals, exit codes, `READY`/`WATCHDOG`/`STOPPING` notifications, `/healthz`. The service unit, pin reset and installation are delivered by `tinkerius/brewberrypi-os` | NFR-001..005, NFR-020..024, NFR-040, [runtime contract](deployment/runtime-contract.md) | Contract tests green ✅; on BrewberryPi OS: crash-safe outputs verified (`kill -9` and hang while heating → relays off) (open, needs `brewberrypi-os` and hardware) | ☐ |
 | M11 | **Auxiliary tools** | 12 | TOOL-001..003 implemented and tested in simulation ✅; run on the Pi (open) | ☐ |
 | M12 | **End-to-end** — full recipe in simulation, one real water-only brew on hardware | 11 §11.8 | AC-090 ✅, AC-091 ✅ (simulation); [hardware test protocol](deployment/hardware-test-protocol.md) signed off (open) | ☐ |
-| M13 | **Cloud Sync** — one-way mirror of the recipes from Google Drive (device-code sign-in, mirror rule, status, commands, UI panel; ADR-0003) | 14, IF-090, IF-091, UI-080..084 | AC-102..AC-116 ✅ with a fake provider and a fake Google; the real Google client and a check on hardware ([deployment/cloud-sync-google.md](deployment/cloud-sync-google.md)) open | ☐ |
+| M13 | **Cloud Sync** — one-way mirror of the recipes from Google Drive (device-code sign-in, mirror rule, status, commands, Cloud Sync control in the top bar; ADR-0003) | 14, IF-090, IF-091, UI-080..085 | AC-102..AC-116 ✅ with a fake provider and a fake Google; the real Google client and a check on hardware ([deployment/cloud-sync-google.md](deployment/cloud-sync-google.md)) open | ☐ |
 
 Suggested order is top to bottom; M6 can run in parallel to M7/M8, M9 needs hardware.
 

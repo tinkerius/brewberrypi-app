@@ -8,7 +8,7 @@ Responsive (usable on phone, tablet and desktop). Language of UI texts: English
 
 ```text
 ┌──────────────────────────────────────────────────────────────┐
-│ BrewberryPi   <host> · <app version>    Device settings ↗    │
+│ BrewberryPi  <host> · <version>  [☁✓ Synced 14:32] Device settings ↗ │
 ├──────────────────────────────────────────────────────────────┤
 │ [Hardware Status]                                             │
 │  Temperature: 62.5°C   Pump: on   Heating: 50%   Process: …   │
@@ -26,11 +26,6 @@ Responsive (usable on phone, tablet and desktop). Language of UI texts: English
 │  └──────────────────────────────────────────────────────────┘ │
 │  [Load Process ▾] [Unload Process]                            │
 │  [Start Process] [Pause Process] [Stop Process]               │
-├──────────────────────────────────────────────────────────────┤
-│ [Cloud Sync]          (only when available, UI-080)           │
-│  Connected to Google Drive (brewer@example.com).              │
-│  Last sync: 14:32:05                                          │
-│  [Sync now] [Disconnect]                                      │
 └──────────────────────────────────────────────────────────────┘
           (modal "Information" with [Confirm] for replies)
 ```
@@ -109,24 +104,40 @@ with blue headers and a dark navbar titled **Brewberry Pi**.)
 
 - `UI-070` The UI MUST work without internet access (all scripts, styles and fonts are served locally by the Pi). The legacy page referenced two CDN scripts only for IE < 9; these are not required.
 
-## 9.9 Cloud Sync panel `[NEW]`
+## 9.9 Cloud Sync in the top bar `[NEW]`
 
-The panel for Cloud Sync ([14](14-cloud-sync.md), `Q-35`), below the Brewing Process panel. Its content follows the
-`cloudSync` status (`IF-090`).
+Cloud Sync ([14](14-cloud-sync.md), `Q-35`) is shown in the top bar, before the `Device settings` link: a pictogram
+with a short text, and a menu with the details and the commands (product-owner decision 2026-11-06; it replaces a
+panel below the Brewing Process panel). Its content follows the `cloudSync` status (`IF-090`).
 
-- `UI-080` The panel, titled `Cloud Sync`, is shown only when the state is not `unavailable` (`SYNC-001`).
-- `UI-081` `disconnected`: the text `Off. Connect to mirror the recipes from your Google Drive, where the recipe
-  editor saves them.` and a button `Connect Google Drive`. The button first opens a dialog titled `Connect Google
-  Drive` with the text `The recipes on this device will be replaced by the recipes in your Google Drive. Recipes
-  that are only on this device are moved to recipes/.backup. Changes made on the device are overwritten while
-  Cloud Sync is on.` and the buttons `Connect` (sends `cloudSyncConnect`) and `Cancel`.
-- `UI-082` `connecting`: the text `Open <url> and enter this code:`, where `<url>` is a link opened in a new tab,
-  then the code in large letters, then `The code expires at <time>.` and a button `Cancel` (sends
-  `cloudSyncDisconnect`).
-- `UI-083` Connected (`idle`, `syncing`, `offline`, `error`): the text `Connected to Google Drive (<account>).`,
-  then `Last sync: <time>` (`never` before the first one; `syncing…` during one), and the buttons `Sync now`
-  (`cloudSyncNow`) and `Disconnect` (`cloudSyncDisconnect`). The issues (`SYNC-013`) are listed under the heading
-  `Not synced`, one line `<recipe>: <message>` each.
-- `UI-084` A `message` (`IF-090`) is shown in the panel as an alert in every state. Times are shown in the
+- `UI-080` The control is shown only when the state is not `unavailable` (`SYNC-001`). It is a button with a
+  pictogram and a short text (the text may be hidden on narrow screens; the button's accessible name is
+  `Cloud Sync: <short text>`):
+
+  | State | Pictogram | Short text |
+  |---|---|---|
+  | `disconnected` | cloud, crossed out (grey) | `Cloud Sync off` |
+  | `connecting` | cloud with three dots (amber) | `Connecting…`, then `Enter the code` once the code is there |
+  | `idle` | cloud with a tick (green) | `Synced <HH:MM>` of `lastSync`, or `Not synced yet` |
+  | `syncing` | two arrows going round, spinning (`UI-085`) | `Syncing…` |
+  | `offline` | cloud, crossed out (amber) | `Offline` |
+  | `error` | cloud with an exclamation mark (red) | `Sync error` |
+
+  With issues (`SYNC-013`), a small badge on the button shows their number. The button opens and closes a menu
+  titled `Cloud Sync`; `Escape` or a click outside closes it.
+- `UI-081` Menu, `disconnected`: the text `Off. Connect to mirror the recipes from your Google Drive, where the
+  recipe editor saves them.` and a button `Connect Google Drive`. The button closes the menu and opens a dialog
+  titled `Connect Google Drive` with the text `The recipes on this device will be replaced by the recipes in your
+  Google Drive. Recipes that are only on this device are moved to recipes/.backup. Changes made on the device are
+  overwritten while Cloud Sync is on.` and the buttons `Connect` (sends `cloudSyncConnect`) and `Cancel`.
+- `UI-082` Menu, `connecting`: the text `Open <url> and enter this code:`, where `<url>` is a link opened in a new
+  tab, then the code in large letters, then `The code expires at <time>.` and a button `Cancel` (sends
+  `cloudSyncDisconnect`). The menu opens by itself when the code arrives.
+- `UI-083` Menu, connected (`idle`, `syncing`, `offline`, `error`): the text `Connected to Google Drive
+  (<account>).`, then `Last sync: <time>` (`never` before the first one; `syncing…` during one), and the buttons
+  `Sync now` (`cloudSyncNow`, disabled during a sync) and `Disconnect` (`cloudSyncDisconnect`). The issues
+  (`SYNC-013`) are listed under the heading `Not synced`, one line `<recipe>: <message>` each.
+- `UI-084` A `message` (`IF-090`) is shown in the menu as an alert in every state. Times are shown in the
   browser's local time (`HH:MM:SS`). The replies of the Cloud Sync commands appear like every reply (`UI-050`).
-
+- `UI-085` A sync in progress is visible in the top bar: the pictogram spins while the state is `syncing`, and for
+  at least 1.5 s after a sync started, so a sync that takes only a moment is still seen.

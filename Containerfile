@@ -1,5 +1,8 @@
+# syntax=docker/dockerfile:1
 # BrewberryPi application image (ADR-0001, runtime contract version 2).
 # Build: make image   (multi-arch release builds run in CI: .github/workflows/ci.yml)
+# Optional build secrets google_drive_client_id and google_drive_client_secret build the Cloud Sync Google
+# client into the image (docs/deployment/cloud-sync-google.md); without them Cloud Sync is unavailable.
 
 # --- 1. Front end (architecture-independent output, built on the build host) -----------------
 FROM --platform=$BUILDPLATFORM node:22-trixie-slim AS frontend
@@ -16,6 +19,9 @@ WORKDIR /src
 COPY pyproject.toml uv.lock README.md ./
 COPY src/ src/
 COPY --from=frontend /src/src/brewberrypi/web/static/ src/brewberrypi/web/static/
+COPY scripts/google-drive-client.py /tmp/
+RUN --mount=type=secret,id=google_drive_client_id --mount=type=secret,id=google_drive_client_secret \
+    python3 /tmp/google-drive-client.py /run/secrets src/brewberrypi/data/google-drive-client.json
 RUN uv build --wheel --out-dir /dist \
  && uv export --frozen --no-dev --no-emit-project --format requirements-txt -o /dist/requirements.txt
 

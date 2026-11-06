@@ -105,6 +105,9 @@ class CloudSync:
         self._interval = interval_seconds
         self._clock = clock
         self.on_recipes_changed = on_recipes_changed
+        self.on_status_changed: Callable[[], None] = lambda: None
+        """Called when the status changed, so it is pushed at once (IF-090): a sync is often over before the
+        next regular check of the event stream."""
         self._state: State = "unavailable" if provider is None else "disconnected"
         self._credentials: Credentials | None = None
         self._sign_in: _SignIn | None = None
@@ -225,6 +228,7 @@ class CloudSync:
         credentials = self._credentials
         assert credentials is not None
         self._state = "syncing"
+        self.on_status_changed()
         try:
             files = await provider.list_folder(credentials)
             wanted, issues = await self._collect(provider, credentials, files)
@@ -315,6 +319,7 @@ class CloudSync:
             self._end_connecting(SIGN_IN_FAILED.format(reason=_reason(error)))
             return
         self._sign_in = _SignIn(code, round((self._clock.wall_time() + code.expires_in) * 1000))
+        self.on_status_changed()
         log.info("Cloud Sync: waiting for the brewer to allow access to %s", self._title)
         deadline = self._clock.monotonic() + code.expires_in
         interval = code.interval
@@ -447,6 +452,7 @@ class CloudSync:
                 log.info("Cloud Sync: %s", state)
             else:
                 log.warning("Cloud Sync: %s: %s", state, message)
+        self.on_status_changed()
 
     def _spawn(self, coroutine: Any) -> None:
         task = asyncio.create_task(coroutine)

@@ -36,6 +36,9 @@ htmlcov/
 /frontend/dist/
 /frontend/coverage/
 
+# The Google client of Cloud Sync: written by the release build from the repository's Actions settings
+/src/brewberrypi/data/google-drive-client.json
+
 # Signing keys (only the public key cosign.pub is committed)
 cosign.key
 *.key

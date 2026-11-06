@@ -53,6 +53,17 @@ jobs:
           test "${GITHUB_REF_NAME#v}" = "$version" || { echo "tag $GITHUB_REF_NAME != version $version"; exit 1; }
           echo "VERSION=$version" >> "$GITHUB_ENV"
 
+      - name: Release needs the Cloud Sync Google client
+        if: env.RELEASE == 'true'
+        env:
+          CLIENT_ID: ${{ vars.GOOGLE_DRIVE_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.GOOGLE_DRIVE_CLIENT_SECRET }}
+        run: |
+          test -n "$CLIENT_ID" -a -n "$CLIENT_SECRET" || {
+            echo "variable GOOGLE_DRIVE_CLIENT_ID or secret GOOGLE_DRIVE_CLIENT_SECRET missing: a release would ship without Cloud Sync"
+            exit 1
+          }
+
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
 
@@ -74,6 +85,10 @@ jobs:
           file: Containerfile
           platforms: linux/arm64,linux/amd64
           build-args: VERSION=${{ env.VERSION || '0.0.0-ci' }}
+          # The Cloud Sync Google client (docs/deployment/cloud-sync-google.md); empty for forks.
+          secrets: |
+            google_drive_client_id=${{ vars.GOOGLE_DRIVE_CLIENT_ID }}
+            google_drive_client_secret=${{ secrets.GOOGLE_DRIVE_CLIENT_SECRET }}
           tags: ${{ env.RELEASE == 'true' && format('{0}:{1}', env.IMAGE, env.VERSION) || format('{0}:ci', env.IMAGE) }}
           push: ${{ env.RELEASE == 'true' }}
 
