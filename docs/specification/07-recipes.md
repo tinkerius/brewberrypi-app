@@ -11,12 +11,12 @@
 
 ## 7.2 Recipe file format
 
-- `RCP-007` `[NEW]` A recipe file is a JSON object with the display `name` and the section `mashing_process`, whose `goals` are the recipe's ordered, non-empty list of goal definitions (§7.3). Sections with recipe design information (e.g. grain bill, hops) may be added next to `mashing_process` later; until the schema defines them, any other key is invalid (`Q-31`). The older format with `goals` at the top level is invalid: the error says to move `goals` into `mashing_process` (`RCP-003`).
+- `RCP-007` `[NEW]` A recipe file is a JSON object with the display `name` and the section `mashing_process`, whose `goals` are the recipe's ordered list of goal definitions (§7.3). The list may be empty (`Q-34`): such a recipe is listed and its details can be read, but it cannot be loaded (`ENG-010`); `mashing_process` itself is always required. Sections with recipe design information (e.g. grain bill, hops) may be added next to `mashing_process` later; until the schema defines them, any other key is invalid (`Q-31`). The older format with `goals` at the top level is invalid: the error says to move `goals` into `mashing_process` (`RCP-003`).
 
 ```json
 {
   "$schema": "../recipe.schema.json",
-  "version": 1,
+  "version": 2,
   "name": "Water Boiling",
   "mashing_process": {
     "goals": [
@@ -61,6 +61,7 @@
 | Version | Since | Change | Migrator from the previous version |
 |---|---|---|---|
 | 1 | 2026-11-06 (`Q-31`, `Q-33`) | `name` and `mashing_process` with `goals`; `version` introduced | – (first version; a file without `version` is in version 1) |
+| 2 | 2026-11-06 (`Q-34`) | `mashing_process.goals` may be empty | `1 → 2`: no change but `version` (every version-1 recipe is valid in version 2) |
 
 ## 7.3 Goal definition format
 

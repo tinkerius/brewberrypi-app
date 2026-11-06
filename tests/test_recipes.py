@@ -1,5 +1,5 @@
-"""M1: recipe catalogue, one file per recipe (RCP-001..011, AC-080, AC-081, AC-084, AC-085, AC-094..099,
-Q-27, Q-29, Q-33)."""
+"""M1: recipe catalogue, one file per recipe (RCP-001..011, AC-080, AC-081, AC-084, AC-085, AC-094..101,
+Q-27, Q-29, Q-33, Q-34)."""
 
 import json
 import logging
@@ -25,6 +25,7 @@ from brewberrypi.recipes import (
     read_catalogue,
     read_recipe,
 )
+from recipe_fixtures import TEST_RECIPES
 
 SPEC_DATA = Path(__file__).parents[1] / "docs" / "specification" / "data"
 PACKAGE_DATA = Path(__file__).parents[1] / "src" / "brewberrypi" / "data"
@@ -456,23 +457,61 @@ def four_versions(calls: list[str], broken: int | None = None) -> RecipeFormat:
     return RecipeFormat(latest=4, migrators=migrators, validator=validators.__getitem__)
 
 
-def test_AC_095_a_file_without_version_is_version_1_and_not_written(tmp_path: Path) -> None:
+def test_AC_095_a_file_without_version_is_version_1(tmp_path: Path) -> None:
+    assert read_recipe("R", json.dumps({"name": "x", "mashing_process": MASH_IN}), "R.json").version == 1
     directory = tmp_path / "recipes"
-    file = write_recipe(directory, [{"type": "MashIn"}])
+    write_recipe(directory, [{"type": "MashIn"}])
+    load_recipes(configured(directory))
+    assert (directory / BACKUP_DIRECTORY / "MyRecipe.v1.json").exists()  # migrated like version 1 (AC-101)
+
+
+def test_AC_095_a_file_in_the_latest_version_is_not_written(tmp_path: Path) -> None:
+    directory = tmp_path / "recipes"
+    content = {"version": LATEST_VERSION, "name": "x", "mashing_process": MASH_IN}
+    file = recipe_file(directory, content)
     before = (file.read_bytes(), file.stat().st_mtime_ns)
     catalogue = load_recipes(configured(directory))
     assert [recipe.id for recipe in catalogue] == ["MyRecipe"]
     assert (file.read_bytes(), file.stat().st_mtime_ns) == before
     assert not (directory / BACKUP_DIRECTORY).exists()
-    assert read_recipe("R", json.dumps({"name": "x", "mashing_process": MASH_IN}), "R.json").version == 1
+
+
+@pytest.mark.parametrize("with_version_1", [True, False])
+def test_AC_101_a_version_1_file_is_written_back_as_version_2(tmp_path: Path, with_version_1: bool) -> None:
+    directory = tmp_path / "recipes"
+    original = {
+        "$schema": "../recipe.schema.json",
+        **({"version": 1} if with_version_1 else {}),
+        "name": "Old",
+        "mashing_process": {"goals": [{"type": "HeatUp", "temperature": 62}, {"type": "MashIn"}]},
+    }
+    file = recipe_file(directory, original, "Old")
+    original_text = file.read_text()
+    [recipe] = load_recipes(configured(directory))
+    assert (recipe.name, [goal.type for goal in recipe.goals]) == ("Old", ["HeatUp", "MashIn"])
+    written = json.loads(file.read_text())
+    assert list(written)[:2] == ["$schema", "version"]
+    assert written == {**original, "version": 2}
+    assert (directory / BACKUP_DIRECTORY / "Old.v1.json").read_text() == original_text
+
+
+def test_AC_100_a_recipe_without_goals_is_listed(tmp_path: Path) -> None:
+    directory = tmp_path / "recipes"
+    recipe_file(directory, {"version": 2, "name": "Draft", "mashing_process": {"goals": []}}, "Draft")
+    recipe_file(directory, {"version": 2, "name": "No section"}, "NoSection")
+    write_recipe(directory, [], recipe_id="OldEmpty")  # version 1 needs a goal: skipped before migrating
+    catalogue = load_recipes(configured(directory))
+    assert [(recipe.id, recipe.goals) for recipe in catalogue] == [("Draft", ())]
 
 
 def test_RCP_008_the_shipped_recipes_are_in_the_latest_version() -> None:
-    assert LATEST_VERSION == 1
+    assert LATEST_VERSION == 2
     for file in (SPEC_DATA / "recipes").iterdir():
         assert json.loads(file.read_text())["version"] == LATEST_VERSION
+    for file in TEST_RECIPES.glob("*.json"):  # else the tests would migrate these files in place
+        assert json.loads(file.read_text())["version"] == LATEST_VERSION
     assert (
-        read_recipe("R", json.dumps({"version": 1, "name": "x", "mashing_process": MASH_IN}), "R").migrated
+        read_recipe("R", json.dumps({"version": 2, "name": "x", "mashing_process": MASH_IN}), "R").migrated
         is None
     )
 
@@ -482,15 +521,17 @@ def test_AC_096_a_newer_version_is_skipped_naming_both_versions(
 ) -> None:
     directory = tmp_path / "recipes"
     write_recipe(directory, [{"type": "MashIn"}], recipe_id="Good")
-    newer = recipe_file(directory, {"version": 2, "name": "New", "mashing_process": MASH_IN}, "New")
+    newer_version = LATEST_VERSION + 1
+    content = {"version": newer_version, "name": "New", "mashing_process": MASH_IN}
+    newer = recipe_file(directory, content, "New")
     before = newer.read_bytes()
     with caplog.at_level(logging.ERROR):
         catalogue = load_recipes(configured(directory))
     assert [recipe.id for recipe in catalogue] == ["Good"]
     [record] = caplog.records
     assert record.getMessage() == (
-        f"invalid recipe file, recipe skipped: {newer}: recipe 'New': format version 2 is newer than this "
-        "application supports (latest 1): update the application"
+        f"invalid recipe file, recipe skipped: {newer}: recipe 'New': format version {newer_version} is "
+        f"newer than this application supports (latest {LATEST_VERSION}): update the application"
     )
     assert newer.read_bytes() == before
 
@@ -546,7 +587,7 @@ def test_AC_097_a_file_in_a_middle_version_runs_only_the_later_migrators(tmp_pat
 
 def test_AC_097_the_library_reads_the_rewritten_file_without_a_change(tmp_path: Path) -> None:
     directory = tmp_path / "recipes"
-    write_recipe(directory, [{"type": "MashIn"}])
+    recipe_file(directory, {"version": LATEST_VERSION, "name": "x", "mashing_process": MASH_IN})
     library = RecipeLibrary.open(configured(directory))
     assert library.refresh() is False  # nothing was migrated, nothing changed
     hidden = directory / BACKUP_DIRECTORY

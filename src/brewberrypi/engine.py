@@ -103,6 +103,8 @@ class Engine:
         recipe = self._recipes.get(recipe_id)
         if recipe is None:
             return self._reject("load", f"Unknown recipe '{recipe_id}'.", "not_found")
+        if not recipe.goals:  # Q-34: listed, but nothing to brew
+            return self._reject("load", f"Recipe {recipe.name} ({recipe.id}) has no goals.")
         running_time = RunningTime(self._clock)
         context = GoalContext(self._hal, self._config.control, running_time)
         goals = [create_goal(definition, context) for definition in recipe.goals]

@@ -1,5 +1,6 @@
 {
   "$schema": "../../docs/specification/data/recipe.schema.json",
+  "version": 2,
   "name": "Iodine Test",
   "mashing_process": {
     "goals": [

@@ -2,12 +2,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://brewberrypi.local/schemas/recipe.schema.json",
   "title": "BrewberryPi recipe file",
-  "description": "One recipe per file; the file name without .json is the recipe id (^[A-Za-z0-9_-]+$). The goals are in the section mashing_process; sections with recipe design information may be added later. version is the recipe file format version (RCP-008..011): this schema is the latest version; older versions are frozen as recipe.v<N>.schema.json. See docs/specification/07-recipes.md.",
+  "description": "One recipe per file; the file name without .json is the recipe id (^[A-Za-z0-9_-]+$). The goals are in the section mashing_process (possibly empty, Q-34); sections with recipe design information may be added later. version is the recipe file format version (RCP-008..011): this schema is the latest version; older versions are frozen as recipe.v<N>.schema.json. See docs/specification/07-recipes.md.",
   "type": "object",
   "required": ["name", "mashing_process"],
   "properties": {
     "$schema": { "type": "string" },
-    "version": { "description": "Recipe file format version (RCP-008); optional, a file without it is in version 1.", "const": 1 },
+    "version": { "description": "Recipe file format version (RCP-008); optional, a file without it is in version 1 (and migrated).", "const": 2 },
     "name": { "$ref": "#/$defs/text" },
     "mashing_process": { "$ref": "#/$defs/mashingProcess" }
   },
@@ -17,7 +17,7 @@
       "type": "object",
       "required": ["goals"],
       "properties": {
-        "goals": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/goal" } }
+        "goals": { "description": "May be empty (Q-34): such a recipe is listed but cannot be loaded.", "type": "array", "items": { "$ref": "#/$defs/goal" } }
       },
       "additionalProperties": false
     },
