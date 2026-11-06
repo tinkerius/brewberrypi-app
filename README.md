@@ -180,9 +180,10 @@ Cloud Sync mirrors the recipes from your Google Drive, where the recipe editor s
 - The sign-in is stored in `.cloud-sync/credentials.json` next to `config.json` (on BrewberryPi OS that is in the
   file share). It only gives access to the recipe editor's files; you can also revoke it at
   https://myaccount.google.com/permissions.
-- `cloudSync.enabled: false` turns Cloud Sync off. It also needs the application's Google client (built in, or
-  `cloudSync.googleDrive.clientId` and `clientSecret`); without one, the panel is not shown. Setting up the
-  client: [docs/deployment/cloud-sync-google.md](docs/deployment/cloud-sync-google.md).
+- `cloudSync.enabled: false` turns Cloud Sync off. It also needs the application's Google client: release
+  images have it built in (from the repository's Actions settings `GOOGLE_DRIVE_CLIENT_ID` and
+  `GOOGLE_DRIVE_CLIENT_SECRET`), or set `cloudSync.googleDrive.clientId` and `clientSecret`; without one, the
+  panel is not shown. See [docs/deployment/cloud-sync-google.md](docs/deployment/cloud-sync-google.md).
 
 ### API
 

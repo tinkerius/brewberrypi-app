@@ -1,6 +1,6 @@
 [project]
 name = "brewberrypi"
-version = "0.1.0-alpha.13"
+version = "0.1.0-alpha.14"
 description = "Raspberry Pi controller for a home-brewing mash kettle"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -34,7 +34,8 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/brewberrypi"]
 # The front end is built by Vite into this (git-ignored) folder and shipped inside the wheel.
-artifacts = ["src/brewberrypi/web/static/**"]
+# The Cloud Sync Google client (git-ignored) is written by the release build (Containerfile).
+artifacts = ["src/brewberrypi/web/static/**", "src/brewberrypi/data/google-drive-client.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

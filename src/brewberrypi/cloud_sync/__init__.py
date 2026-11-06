@@ -4,8 +4,8 @@ from collections.abc import Callable
 from pathlib import Path
 
 from brewberrypi.clock import Clock
-from brewberrypi.cloud_sync.google_drive import BUILT_IN_CLIENT_ID, BUILT_IN_CLIENT_SECRET, GoogleDrive
 from brewberrypi.cloud_sync.google_drive import TITLE as GOOGLE_DRIVE
+from brewberrypi.cloud_sync.google_drive import GoogleDrive, built_in_client
 from brewberrypi.cloud_sync.service import CloudSync
 from brewberrypi.config import CloudSyncConfig
 
@@ -19,8 +19,10 @@ def create_cloud_sync(
     on_recipes_changed: Callable[[], None] = lambda: None,
 ) -> CloudSync:
     """Cloud Sync with Google Drive; unavailable when disabled or without a client id (SYNC-001)."""
-    client_id = config.google_drive_client_id or BUILT_IN_CLIENT_ID
-    client_secret = config.google_drive_client_secret or BUILT_IN_CLIENT_SECRET
+    if config.google_drive_client_id:  # the configuration replaces the built-in client
+        client_id, client_secret = config.google_drive_client_id, config.google_drive_client_secret
+    else:
+        client_id, client_secret = built_in_client()
     provider = GoogleDrive(client_id, client_secret, clock) if config.enabled and client_id else None
     return CloudSync(
         provider,

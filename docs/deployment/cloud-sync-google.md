@@ -22,11 +22,26 @@ In the editor's project at [console.cloud.google.com](https://console.cloud.goog
 Google does not treat the secret of this client type as confidential: it is shipped with every device, so both
 values are public.
 
-## Put it into the application
+## Put it into every release
 
-Either build it in: set `BUILT_IN_CLIENT_ID` and `BUILT_IN_CLIENT_SECRET` in
-`src/brewberrypi/cloud_sync/google_drive.py` and release the app; or, for one device, set it in its
-`config.json`:
+The values are not in git: the repository is public, and GitHub's secret scanning flags Google client secrets.
+Set them once in the app repository, **Settings → Secrets and variables → Actions**:
+
+| Name | Kind | Value |
+|---|---|---|
+| `GOOGLE_DRIVE_CLIENT_ID` | Variable | the client ID (`….apps.googleusercontent.com`) |
+| `GOOGLE_DRIVE_CLIENT_SECRET` | Secret | the client secret (`GOCSPX-…`) |
+
+CI hands both to the image build as build secrets (`.github/workflows/ci.yml`, job *Container image*). The
+Containerfile writes them with `scripts/google-drive-client.py` into the package file
+`brewberrypi/data/google-drive-client.json` (git-ignored), which the application reads as its built-in client.
+A release build stops if either value is missing. Builds without them, such as `make image` or CI for a fork,
+have no built-in client, so Cloud Sync is unavailable there.
+
+The values end up readable in the published image. That is expected for this client type.
+
+To try a client on one device without a release, or to use your own client, set it in that device's
+`config.json`; it replaces the built-in client:
 
 ```json
 {
@@ -39,7 +54,10 @@ Either build it in: set `BUILT_IN_CLIENT_ID` and `BUILT_IN_CLIENT_SECRET` in
 }
 ```
 
-and restart the application.
+For local development, the same JSON as the package file (`{"clientId": "…", "clientSecret": "…"}`) in
+`src/brewberrypi/data/google-drive-client.json` also works.
+
+To replace the secret, change it in the Actions settings and release a new version.
 
 ## Check it once
 

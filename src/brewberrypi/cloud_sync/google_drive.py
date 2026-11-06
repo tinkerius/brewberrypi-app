@@ -13,6 +13,8 @@ Read only: nothing here writes to Drive.
 import base64
 import json
 import logging
+from importlib.resources import files
+from importlib.resources.abc import Traversable
 from typing import Any
 
 import httpx
@@ -35,10 +37,28 @@ log = logging.getLogger(__name__)
 KEY = "googleDrive"
 TITLE = "Google Drive"
 
-BUILT_IN_CLIENT_ID = ""
-"""The application's OAuth client (type *TVs and Limited Input devices*). Empty until it is created in the
-recipe editor's Google Cloud project; without a client id Cloud Sync is unavailable (SYNC-001)."""
-BUILT_IN_CLIENT_SECRET = ""
+BUILT_IN_CLIENT_FILE = files("brewberrypi").joinpath("data/google-drive-client.json")
+"""The application's OAuth client (type *TVs and Limited Input devices*), `{"clientId", "clientSecret"}`.
+Not in git: the release build writes it from the repository's Actions settings (`GOOGLE_DRIVE_CLIENT_ID`,
+`GOOGLE_DRIVE_CLIENT_SECRET`; Containerfile, docs/deployment/cloud-sync-google.md). Without it, and without
+`cloudSync.googleDrive.clientId`, Cloud Sync is unavailable (SYNC-001)."""
+
+
+def built_in_client(file: Traversable = BUILT_IN_CLIENT_FILE) -> tuple[str, str]:
+    """`(client id, client secret)` built into this build, or `("", "")`."""
+    try:
+        data = json.loads(file.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return "", ""
+    except (OSError, ValueError) as error:
+        log.warning("Cloud Sync: the built-in Google client cannot be read: %s", type(error).__name__)
+        return "", ""
+    client_id = data.get("clientId") if isinstance(data, dict) else None
+    client_secret = data.get("clientSecret") if isinstance(data, dict) else None
+    if not isinstance(client_id, str) or not isinstance(client_secret, str):
+        return "", ""
+    return client_id, client_secret
+
 
 DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file"
 SCOPES = f"openid email {DRIVE_SCOPE}"
