@@ -76,9 +76,15 @@ What constrains the design:
 ### What a sync does
 
 A sync runs:
-- 10 s after the app has started and the brewer is connected;
-- then every `sync.intervalSeconds` (default 300; timed with the monotonic clock, `NFR-005`);
+- as soon as the app has finished starting (outputs off, server listening), if the brewer is connected, and
+  right after **Connect** succeeds;
+- then every `sync.intervalSeconds` (default 30; timed with the monotonic clock, `NFR-005`);
 - right away on **Sync now**.
+
+The device has to poll: Drive's change notifications are sent to a public HTTPS address, and the device is
+on the LAN. A pass where nothing changed is one small `files.list` request, so 30 s costs little: about
+3,000 requests a day, well inside Drive's free quota, and a few MB of traffic a month. Recipes are only
+downloaded when their Drive `version` changed.
 
 It is one pass:
 
@@ -127,7 +133,8 @@ ids are written.
 ### Errors and offline
 
 - No network, DNS failure, TLS failure before NTP has run, Google 5xx or 429: the sync stops, the status
-  shows "offline since …", and it is retried with backoff (at most `sync.intervalSeconds`). Nothing on disk
+  shows "offline since …", and it is retried with backoff: the wait doubles after each failure, up to 5 minutes, and is back to
+  `sync.intervalSeconds` after a pass that succeeds. Nothing on disk
   changes.
 - `invalid_grant` (token revoked by the brewer at Google, or expired): the status becomes "disconnected,
   connect again". The token file is deleted. Synced files stay.
@@ -155,7 +162,7 @@ a follow-up, not part of this decision.
 | Key | Default | Meaning |
 |---|---|---|
 | `sync.enabled` | `true` | `false` hides the sync in the UI and turns it off (for devices that must stay offline) |
-| `sync.intervalSeconds` | `300` | time between syncs, minimum 60 |
+| `sync.intervalSeconds` | `30` | time between syncs, minimum 10 |
 | `sync.google.clientId`, `sync.google.clientSecret` | built in | the OAuth client, for own builds |
 
 ### Interface (ADR-0002: REST plus SSE)
@@ -217,6 +224,6 @@ a follow-up, not part of this decision.
   - Spec 08: `SyncStatus` and the event `sync`.
   - Add `sync` to `config.schema.json`.
   - A milestone in `docs/implementation-plan.md`.
-  - Recipe editor: help text "Your BrewberryPi picks up saved recipes within 5 minutes"; keep the Drive layout
+  - Recipe editor: help text "Your BrewberryPi picks up saved recipes within 30 seconds"; keep the Drive layout
     stable (already a rule there); privacy page.
   - Later, if wanted: runtime contract v3 with a secrets mount for the token.
