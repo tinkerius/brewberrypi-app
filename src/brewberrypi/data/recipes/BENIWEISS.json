@@ -1,5 +1,6 @@
 {
   "$schema": "../recipe.schema.json",
+  "version": 1,
   "name": "München 12.6 - SUD2:BENIWEISS",
   "mashing_process": {
     "goals": [

@@ -130,6 +130,7 @@ The goals are in the section `mashing_process`, so that recipe design informatio
 
 ```json
 {
+  "version": 1,
   "name": "Water Boiling",
   "mashing_process": {
     "goals": [
@@ -143,6 +144,13 @@ The goals are in the section `mashing_process`, so that recipe design informatio
 Recipe files in the older format, with `goals` at the top level, are skipped, and the log says to move `goals` into
 `mashing_process`. To update them, do that in each file, or delete the recipe directory so that the next start
 writes the shipped recipes again (recipes of your own are then lost).
+
+`version` is the version of the recipe file format (a file without it is in version 1, today's format). A
+recipe file in a newer version than the application knows is skipped, and the log says to update the
+application. A file in an older version is migrated to the latest version and written back; the original is kept
+in the hidden folder `.backup` of the recipe directory (`<id>.v<old version>.json`). After going back to an older
+application version, put those copies back to use the recipes again. See
+[07-recipes.md §7.2.1](docs/specification/07-recipes.md).
 
 ### API
 
