@@ -29,6 +29,12 @@ export function commandRequest(command: CommandName, args: CommandArgs = {}): Ht
         path: `/api/process/requests/${encodeURIComponent(args.request ?? "")}`,
         body: { response: args.response },
       };
+    case "cloudSyncConnect":
+      return { method: "POST", path: "/api/cloud-sync/connect", body: {} };
+    case "cloudSyncDisconnect":
+      return { method: "POST", path: "/api/cloud-sync/disconnect", body: {} };
+    case "cloudSyncNow":
+      return { method: "POST", path: "/api/cloud-sync/sync", body: {} };
     default:
       return { method: "POST", path: `/api/process/${command}`, body: {} };
   }

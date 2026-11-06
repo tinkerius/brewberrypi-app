@@ -2,9 +2,10 @@
 import { render } from "preact";
 import { act } from "preact/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { CLOUD_SYNC_TITLE, CloudSyncPanel, ConnectCloudSync, connectWarning, formatSyncTime, offText } from "./cloudSync";
 import { InformationModal, STOP_QUESTION, StopConfirmation } from "./dialogs";
 import { APP_TITLE, ConnectionIndicator, DEVICE_LINK_TEXT, GOAL_STYLES, HardwareStatusPanel, PageHeader, ProcessPanel, type SendCommand } from "./panels";
-import type { ProcessState, Recipe } from "./types";
+import type { CloudSyncStatus, ProcessState, Recipe } from "./types";
 
 let root: HTMLElement;
 
@@ -238,3 +239,109 @@ describe("connection indicator", () => {
     expect(root.querySelector('[role="status"]')).toBeNull();
   });
 });
+
+describe("Cloud Sync panel (UI-080..084)", () => {
+  const BASE: CloudSyncStatus = {
+    state: "disconnected",
+    provider: "Google Drive",
+    account: null,
+    signIn: null,
+    lastSync: null,
+    message: null,
+    issues: [],
+  };
+
+  function panel(status: CloudSyncStatus | null, connected = true) {
+    const send = vi.fn<SendCommand>();
+    const onConnect = vi.fn();
+    show(<CloudSyncPanel status={status} connected={connected} send={send} onConnect={onConnect} />);
+    return { send, onConnect };
+  }
+
+  it("AC-113 is not shown while unavailable or unknown", () => {
+    panel({ ...BASE, state: "unavailable" });
+    expect(root.textContent).toBe("");
+    panel(null);
+    expect(root.textContent).toBe("");
+  });
+
+  it("AC-116 disconnected: the text, and Connect opens the dialog", () => {
+    const { onConnect, send } = panel({ ...BASE, message: "Access was not allowed. Connect again." });
+    expect(root.querySelector("h2")?.textContent).toBe(CLOUD_SYNC_TITLE);
+    expect(root.textContent).toContain(offText("Google Drive"));
+    expect(root.textContent).toContain("Off. Connect to mirror the recipes from your Google Drive, where the recipe editor saves them.");
+    expect(root.querySelector("[role=alert]")?.textContent).toBe("Access was not allowed. Connect again.");
+    act(() => button("Connect Google Drive").click());
+    expect(onConnect).toHaveBeenCalledOnce();
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("AC-116 the connect dialog warns before connecting", () => {
+    const onConnect = vi.fn();
+    const onCancel = vi.fn();
+    show(<ConnectCloudSync open provider="Google Drive" onCancel={onCancel} onConnect={onConnect} />);
+    expect(root.querySelector("#modal-title")?.textContent).toBe("Connect Google Drive");
+    expect(root.textContent).toContain(
+      "The recipes on this device will be replaced by the recipes in your Google Drive. Recipes that are only on this " +
+        "device are moved to recipes/.backup. Changes made on the device are overwritten while Cloud Sync is on.",
+    );
+    expect(connectWarning("Google Drive")).toContain("recipes/.backup");
+    act(() => button("Connect").click());
+    expect(onConnect).toHaveBeenCalledOnce();
+    act(() => button("Cancel").click());
+    expect(onCancel).toHaveBeenCalledOnce();
+  });
+
+  it("AC-116 connecting: the code, its link and expiry; Cancel disconnects", () => {
+    const expiresAt = new Date(2026, 10, 6, 14, 30, 5).getTime();
+    const { send } = panel({
+      ...BASE,
+      state: "connecting",
+      signIn: { code: "WXYZ-ABCD", url: "https://www.google.com/device", expiresAt },
+    });
+    const link = root.querySelector("a");
+    expect(link?.getAttribute("href")).toBe("https://www.google.com/device");
+    expect(link?.getAttribute("target")).toBe("_blank");
+    expect(root.textContent).toContain("Open https://www.google.com/device and enter this code:");
+    expect(root.querySelector("[data-code]")?.textContent).toBe("WXYZ-ABCD");
+    expect(root.textContent).toContain("The code expires at 14:30:05.");
+    expect(formatSyncTime(expiresAt)).toBe("14:30:05");
+    act(() => button("Cancel").click());
+    expect(send).toHaveBeenCalledWith("cloudSyncDisconnect");
+  });
+
+  it("AC-116 connected: account, last sync, issues, Sync now and Disconnect", () => {
+    const lastSync = new Date(2026, 10, 6, 14, 32, 5).getTime();
+    const { send } = panel({
+      ...BASE,
+      state: "offline",
+      account: "brewer@example.com",
+      lastSync,
+      message: "Google Drive cannot be reached: no network.",
+      issues: [{ recipe: "bad name", message: "Not a valid recipe file name." }],
+    });
+    expect(root.textContent).toContain("Connected to Google Drive (brewer@example.com).");
+    expect(root.querySelector("[data-last-sync]")?.textContent).toBe("Last sync: 14:32:05");
+    expect(root.querySelector("[role=alert]")?.textContent).toBe("Google Drive cannot be reached: no network.");
+    expect(root.textContent).toContain("Not synced");
+    expect(root.querySelector("[data-issues]")?.textContent).toBe("bad name: Not a valid recipe file name.");
+    act(() => button("Sync now").click());
+    act(() => button("Disconnect").click());
+    expect(send.mock.calls).toEqual([["cloudSyncNow"], ["cloudSyncDisconnect"]]);
+  });
+
+  it("AC-116 before the first sync and during one", () => {
+    panel({ ...BASE, state: "idle", account: "brewer@example.com" });
+    expect(root.querySelector("[data-last-sync]")?.textContent).toBe("Last sync: never");
+    panel({ ...BASE, state: "syncing", account: "brewer@example.com" });
+    expect(root.querySelector("[data-last-sync]")?.textContent).toBe("Last sync: syncing…");
+    expect(button("Sync now").disabled).toBe(true);
+  });
+
+  it("UI-061 buttons are disabled while disconnected from the server", () => {
+    panel({ ...BASE, state: "idle", account: "brewer@example.com" }, false);
+    expect(button("Sync now").disabled).toBe(true);
+    expect(button("Disconnect").disabled).toBe(true);
+  });
+});
+

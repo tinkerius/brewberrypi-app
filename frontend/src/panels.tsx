@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "preact/hooks";
 import { isAccepted } from "./commands";
 import { descriptionLines, formatHeating, formatPump, formatTemperature } from "./format";
-import type { CommandName, EngineState, Goal, HardwareStatus, ProcessState, Recipe } from "./types";
+import type { CommandName, EngineCommand, EngineState, Goal, HardwareStatus, ProcessState, Recipe } from "./types";
 import { BUTTON_STYLES, CARD_STYLE, SELECT_STYLE, TITLE_STYLE } from "./ui";
 
 export type SendCommand = (command: CommandName, args?: Record<string, string>) => void;
@@ -184,7 +184,7 @@ export function ProcessPanel(props: {
     item?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
   }, [activeIndex]);
 
-  const enabled = (command: Exclude<CommandName, "respond">) => connected && isAccepted(command, state);
+  const enabled = (command: Exclude<EngineCommand, "respond">) => connected && isAccepted(command, state);
 
   return (
     <Panel title="Brewing Process" stale={!connected}>

@@ -75,6 +75,7 @@ const SNAPSHOT: Snapshot = {
   process: { state: "NoProcess" },
   recipes: [{ id: "BENIWEISS", name: "München 12.6 - SUD2:BENIWEISS" }],
   chart: [{ key: "Kettle Temperature", values: [{ x: 1000, y: 20 }, { x: 2000, y: 20.1 }] }],
+  cloudSync: { state: "disconnected", provider: "Google Drive", account: null, signIn: null, lastSync: null, message: null, issues: [] },
   heartbeatMilliseconds: 5000,
 };
 
@@ -89,6 +90,13 @@ describe("state", () => {
     state = receive(state, "ping", {});
     expect(state.hardware?.temperature).toBe(21);
     expect(state.process?.state).toBe("Loaded");
+  });
+
+  it("AC-116 takes the Cloud Sync status from the snapshot, then each change", () => {
+    let state = receive(initialState, "snapshot", SNAPSHOT);
+    expect(state.cloudSync?.state).toBe("disconnected");
+    state = receive(state, "cloudSync", { ...SNAPSHOT.cloudSync, state: "idle", account: "brewer@example.com" });
+    expect(state.cloudSync?.account).toBe("brewer@example.com");
   });
 
   it("IF-073 applies chart updates: thinned points out, the new point in", () => {
@@ -160,6 +168,9 @@ describe("IF-053 commands over REST", () => {
   it("maps every command to its HTTP request", () => {
     expect(commandRequest("load", { recipe: "BENIWEISS" })).toEqual({ method: "PUT", path: "/api/process", body: { recipe: "BENIWEISS" } });
     expect(commandRequest("unload")).toEqual({ method: "DELETE", path: "/api/process", body: {} });
+    expect(commandRequest("cloudSyncConnect")).toEqual({ method: "POST", path: "/api/cloud-sync/connect", body: {} });
+    expect(commandRequest("cloudSyncDisconnect")).toEqual({ method: "POST", path: "/api/cloud-sync/disconnect", body: {} });
+    expect(commandRequest("cloudSyncNow")).toEqual({ method: "POST", path: "/api/cloud-sync/sync", body: {} });
     for (const command of ["start", "pause", "resume", "stop"] as const) {
       expect(commandRequest(command)).toEqual({ method: "POST", path: `/api/process/${command}`, body: {} });
     }

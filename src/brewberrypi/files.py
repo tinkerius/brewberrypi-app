@@ -14,11 +14,18 @@ DIRECTORY_MODE = 0o775
 
 def write_file(path: Path, text: str) -> None:
     """Write `text` (UTF-8) to `path` atomically; a reader sees the old file or the whole new one."""
+    write_bytes(path, text.encode("utf-8"))
+
+
+def write_bytes(path: Path, content: bytes) -> None:
+    """Write `content` to `path` atomically, like `write_file`."""
     temporary = path.with_name(f".{path.name}.tmp")
     descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, FILE_MODE)
     try:
         os.fchmod(descriptor, FILE_MODE)  # independent of the umask
-        os.write(descriptor, text.encode("utf-8"))
+        view = memoryview(content)
+        while view:
+            view = view[os.write(descriptor, view) :]
         os.fsync(descriptor)
     finally:
         os.close(descriptor)

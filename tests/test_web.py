@@ -14,6 +14,7 @@ from starlette.testclient import TestClient
 
 from brewberrypi.chart import TemperatureChart
 from brewberrypi.clock import ManualClock
+from brewberrypi.cloud_sync.service import CloudSync
 from brewberrypi.config import load_config
 from brewberrypi.engine import Engine
 from brewberrypi.hal.mock import MockHal
@@ -28,6 +29,7 @@ from brewberrypi.web.messages import (
     run_command,
     validator,
 )
+from cloud_fixtures import FakeCloud, recipe_bytes, store_credentials
 from recipe_fixtures import with_test_recipes
 
 CONFIG = load_config(Path(__file__).parents[1] / "docs" / "specification" / "data" / "config.example.json")
@@ -42,6 +44,7 @@ SNAPSHOT = validator("Snapshot")
 COMMAND_REPLY = validator("CommandReply")
 ERROR_REPLY = validator("ErrorReply")
 UI_SETTINGS = validator("UiSettings")
+CLOUD_SYNC_STATUS = validator("CloudSyncStatus")
 JSON = {"Content-Type": "application/json"}
 
 
@@ -649,3 +652,105 @@ def test_missing_front_end_is_explained(hal: MockHal, clock: ManualClock, tmp_pa
         response = http.get("/")
     assert response.status_code == 503
     assert "make build" in response.text
+
+
+# --- Cloud Sync (spec 14, IF-090, IF-091) ---
+
+
+async def test_AC_116_cloud_sync_status_in_the_snapshot_pushed_and_its_commands(
+    hal: MockHal, clock: ManualClock, tmp_path: Path
+) -> None:
+
+    cloud = FakeCloud()
+    (tmp_path / "recipes").mkdir()
+    sync = CloudSync(
+        cloud,
+        title="Google Drive",
+        recipe_directory=tmp_path / "recipes",
+        state_directory=tmp_path,
+        interval_seconds=30,
+        clock=ManualClock(),
+    )
+    event_clock = ManualClock()
+    app = create_app(CONFIG, CATALOGUE, hal, clock, event_clock=event_clock, cloud_sync=sync)
+    async with app.router.lifespan_context(app):
+        stream = Stream(app)
+        await event_clock.advance(0)
+        [(_, snapshot)] = stream.events()
+        SNAPSHOT(snapshot)
+        assert snapshot["cloudSync"]["state"] == "disconnected"
+        status, body = await call(app, "GET", "/api/cloud-sync")
+        assert status == 200
+        CLOUD_SYNC_STATUS(body)
+
+        for path, command, message in [
+            ("disconnect", "cloudSyncDisconnect", "Cloud Sync is not connected."),
+            ("sync", "cloudSyncNow", "Cloud Sync is not connected."),
+        ]:
+            status, reply = await call(app, "POST", f"/api/cloud-sync/{path}", {})
+            COMMAND_REPLY(reply)
+            assert (status, reply) == (409, {"command": command, "success": False, "message": message})
+
+        status, reply = await call(app, "POST", "/api/cloud-sync/connect")
+        COMMAND_REPLY(reply)
+        assert (status, reply["message"]) == (200, "Connecting to Google Drive.")
+        await event_clock.advance(0)  # pushed with the command; the code follows once the provider sent it
+        pushed = [data for name, data in stream.events() if name == "cloudSync"]
+        assert pushed[-1]["state"] == "connecting"
+        await event_clock.advance(CONFIG.events.check_milliseconds / 1000)
+        pushed = [data for name, data in stream.events() if name == "cloudSync"]
+        assert pushed[-1]["signIn"]["code"] == "WXYZ-ABCD"
+        CLOUD_SYNC_STATUS(pushed[-1])
+
+        status, reply = await call(app, "POST", "/api/cloud-sync/connect", {"unexpected": 1})
+        assert status == 422
+        status, reply = await call(app, "POST", "/api/cloud-sync/nonsense", {})
+        assert status == 404
+        await stream.close()
+
+
+async def test_AC_112_cloud_sync_commands_while_unavailable(hal: MockHal, clock: ManualClock) -> None:
+    app = create_app(CONFIG, CATALOGUE, hal, clock, event_clock=ManualClock())  # no client id: unavailable
+    async with app.router.lifespan_context(app):
+        assert (await call(app, "GET", "/api/cloud-sync"))[1]["state"] == "unavailable"
+        for path in ("connect", "disconnect", "sync"):
+            status, reply = await call(app, "POST", f"/api/cloud-sync/{path}", {})
+            assert (status, reply["message"]) == (409, "Cloud Sync is not available.")
+
+
+async def test_AC_114_a_loaded_process_keeps_its_recipe_when_cloud_sync_changes_it(
+    hal: MockHal, clock: ManualClock, tmp_path: Path
+) -> None:
+
+    cloud = FakeCloud()
+    cloud.put("HOLD30.json", recipe_bytes("Hold 30", [{"type": "HeatUp", "temperature": 30}]))
+    store_credentials(tmp_path)
+    directory = tmp_path / "recipes"
+    directory.mkdir()
+    library = RecipeLibrary.open(dataclasses.replace(CONFIG.recipes, directory=directory))
+    event_clock = ManualClock()
+    sync = CloudSync(
+        cloud,
+        title="Google Drive",
+        recipe_directory=directory,
+        state_directory=tmp_path,
+        interval_seconds=30,
+        clock=event_clock,
+    )
+    app = create_app(CONFIG, library, hal, clock, event_clock=event_clock, cloud_sync=sync)
+    async with app.router.lifespan_context(app):
+        stream = Stream(app)
+        await event_clock.advance(0)  # the startup sync mirrors the cloud folder
+        assert (await call(app, "GET", "/api/recipes"))[1] == [{"id": "HOLD30", "name": "Hold 30"}]
+        assert (await call(app, "PUT", "/api/process", {"recipe": "HOLD30"}))[0] == 200
+        before = (await call(app, "GET", "/api/process"))[1]
+
+        cloud.put("HOLD30.json", recipe_bytes("Hold 40", [{"type": "HeatUp", "temperature": 40}]))
+        assert (await call(app, "POST", "/api/cloud-sync/sync", {}))[0] == 200
+        await event_clock.advance(0)
+        recipes_pushed = [data for name, data in stream.events() if name == "recipes"]
+        assert recipes_pushed[-1] == [{"id": "HOLD30", "name": "Hold 40"}]
+        assert (await call(app, "GET", "/api/process"))[1] == before  # the loaded process keeps its goals
+        assert hal.get_pump_status() is False
+        assert hal.get_heating_status() == 0
+        await stream.close()
