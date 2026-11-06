@@ -3,7 +3,7 @@
 - **Status:** Proposed
 - **Date:** 2026-11-06
 - **Deciders:** Benedikt Hauptmann (product owner); proposal by Claude Code
-- **Question:** `Q-34`. Decided by the product owner on 2026-11-06:
+- **Question:** `Q-35`. Decided by the product owner on 2026-11-06:
   - one way, from the cloud to the device;
   - while the sync is connected, the recipe directory is a mirror of the cloud, and local changes are
     overwritten.
@@ -265,7 +265,7 @@ a follow-up, not part of this decision.
   - The app talks to the internet for the first time. The privacy notes of the app and the editor must say
     what the device reads and where the token is kept.
 - Follow-ups:
-  - Answer `Q-34` and write the requirements into spec 07, new section 7.6, with acceptance criteria:
+  - Answer `Q-35` and write the requirements into spec 07, new section 7.6, with acceptance criteria:
     - `RCP-001`: a file deleted by the brewer is not written again, except while the sync is connected;
     - `RCP-004`: unchanged;
     - lift the out-of-scope line in spec 01 for this feature.

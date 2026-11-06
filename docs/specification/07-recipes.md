@@ -5,18 +5,18 @@
 - `RCP-001` Recipes are read only from a **recipe directory** with **one file per recipe** (`Q-27`): the file `<id>.json` holds the recipe with that `id`, so the file name is the recipe id (letters, digits, `_` and `-`) and the file itself has no `id`. The directory is `recipes` by default, configurable with `recipes.directory`, relative to the configuration file's directory (`Q-19`). Only files ending in `.json` are read; hidden files (name starting with `.`), other files and subdirectories are ignored. If the recipe directory does not exist, the application creates it and writes the shipped recipes (`RCP-002`) into it, one file each, so a first start already offers recipes; a recipe file the brewer deletes later is not written again (`Q-29`). If the recipe directory cannot be created or read, the application refuses to start. Format of one file: §7.2 and [data/recipe.schema.json](data/recipe.schema.json). `[NEW]` (legacy: recipes hard-coded in source code)
 - `RCP-002` The shipped recipes MUST be exactly the 2 recipes of [data/recipes/](data/recipes/), `BENIWEISS` and `WaterBoil`, one file each (`Q-32`; legacy: 8 recipes, the other 6 are no longer shipped). The recipe list is sorted by recipe id in character-code order (upper case before lower case): `BENIWEISS`, `WaterBoil` (`Q-27`).
 - `RCP-003` Invalid recipe file (syntax, schema, unknown goal type, missing parameter, file name that is not a valid id, unreadable file, old format with `goals` at the top level, format `version` that is invalid or newer than the application supports, failed migration — see §7.2) → the application logs a precise error (file, recipe id, goal index) and **skips that recipe**; all other recipes are loaded (`Q-27`). A recipe directory without valid recipes gives an empty recipe list.
-- `RCP-004` The catalogue is read-only at runtime (no recipe editing in the UI; see `Q-09`).
+- `RCP-004` The catalogue is read-only at runtime (no recipe editing in the UI; see `Q-09`). Recipe files are written with the separate web editor (https://recipes.brewberrypi.org) or by hand.
 - `RCP-005` The list of recipes (`id`, `name`) is published to clients (`IF-030`).
 - `RCP-006` `[NEW]` While it runs, the application checks the recipe directory every `recipes.checkMilliseconds` (default 1000) and reads it again when a recipe file was added, changed or removed (`Q-29`); `RCP-003` applies to the files read again. The new recipe list is pushed to every client (`IF-072`), and `load` uses it. A loaded process keeps the recipe it was loaded from. A recipe directory that disappears is created again as in `RCP-001`; while it cannot be read, the recipe list stays as it is and the error is logged once. (Legacy: recipes changed only with a new program version.)
 
 ## 7.2 Recipe file format
 
-- `RCP-007` `[NEW]` A recipe file is a JSON object with the display `name` and the section `mashing_process`, whose `goals` are the recipe's ordered, non-empty list of goal definitions (§7.3). Sections with recipe design information (e.g. grain bill, hops) may be added next to `mashing_process` later; until the schema defines them, any other key is invalid (`Q-31`). The older format with `goals` at the top level is invalid: the error says to move `goals` into `mashing_process` (`RCP-003`).
+- `RCP-007` `[NEW]` A recipe file is a JSON object with the display `name` and the section `mashing_process`, whose `goals` are the recipe's ordered list of goal definitions (§7.3). The list may be empty (`Q-34`): such a recipe is listed and its details can be read, but it cannot be loaded (`ENG-010`); `mashing_process` itself is always required. Sections with recipe design information (e.g. grain bill, hops) may be added next to `mashing_process` later; until the schema defines them, any other key is invalid (`Q-31`). The older format with `goals` at the top level is invalid: the error says to move `goals` into `mashing_process` (`RCP-003`).
 
 ```json
 {
   "$schema": "../recipe.schema.json",
-  "version": 1,
+  "version": 2,
   "name": "Water Boiling",
   "mashing_process": {
     "goals": [
@@ -61,6 +61,7 @@
 | Version | Since | Change | Migrator from the previous version |
 |---|---|---|---|
 | 1 | 2026-11-06 (`Q-31`, `Q-33`) | `name` and `mashing_process` with `goals`; `version` introduced | – (first version; a file without `version` is in version 1) |
+| 2 | 2026-11-06 (`Q-34`) | `mashing_process.goals` may be empty | `1 → 2`: no change but `version` (every version-1 recipe is valid in version 2) |
 
 ## 7.3 Goal definition format
 

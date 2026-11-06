@@ -53,7 +53,7 @@ sending client. `[FIX-15]`
 ### Command details
 
 - `ENG-010` **load(recipeId)**
-  - Precondition: `recipeId` present and known. Missing parameter → reply `success=false`, `"parameter 'recipe' not set."`. Unknown id → `success=false`, `"Unknown recipe '<id>'."` `[FIX-10]`
+  - Precondition: `recipeId` present and known. Missing parameter → reply `success=false`, `"parameter 'recipe' not set."`. Unknown id → `success=false`, `"Unknown recipe '<id>'."` `[FIX-10]`. A recipe without goals (`Q-34`) → `success=false`, outcome *conflict*, `"Recipe <recipeName> (<recipeId>) has no goals."`; nothing changes, a loaded process stays loaded. `[NEW]`
   - Effect: replaces any loaded (not running/paused) process with a **fresh** instance of the recipe (`DOM-011`); state `Loaded`; all goals `Waiting`.
   - Reply message (legacy text): `Process <processName> (<processId>) loaded.`
 - `ENG-011` **unload** — removes the process; state `NoProcess`; all actuators off; reminder loops stop. Reply `Process unloaded.`

@@ -17,7 +17,7 @@ from brewberrypi.clock import ManualClock
 from brewberrypi.config import load_config
 from brewberrypi.engine import Engine
 from brewberrypi.hal.mock import MockHal
-from brewberrypi.recipes import RecipeLibrary
+from brewberrypi.recipes import RecipeCatalogue, RecipeLibrary, parse_recipe
 from brewberrypi.web.app import create_app
 from brewberrypi.web.events import MAX_BACKLOG, EventHub, Subscriber, frame
 from brewberrypi.web.messages import (
@@ -360,6 +360,23 @@ def test_rest_reads(hal: MockHal, clock: ManualClock) -> None:
         ERROR_REPLY(missing.json())
         CHART_DATA(http.get("/api/chart").json())
         assert http.get("/api/chart?since=x").status_code == 422
+
+
+def test_AC_100_a_recipe_without_goals_is_listed_but_not_loaded(hal: MockHal, clock: ManualClock) -> None:
+    empty = parse_recipe("Draft", '{"version": 2, "name": "Draft", "mashing_process": {"goals": []}}', "test")
+    catalogue = RecipeCatalogue(recipes=(empty, *CATALOGUE.recipes), source="test")
+    with TestClient(create_app(CONFIG, catalogue, hal, clock)) as http:
+        assert "Draft" in [recipe["id"] for recipe in http.get("/api/recipes").json()]
+        detail = http.get("/api/recipes/Draft").json()
+        RECIPE_DETAIL(detail)
+        assert detail == {"id": "Draft", "name": "Draft", "goals": []}
+        assert http.put("/api/process", json={"recipe": "WaterBoil"}).status_code == 200
+        refused = http.put("/api/process", json={"recipe": "Draft"})
+        assert (refused.status_code, refused.json()) == (
+            409,
+            {"command": "load", "success": False, "message": "Recipe Draft (Draft) has no goals."},
+        )
+        assert http.get("/api/process").json()["processid"] == "WaterBoil"
 
 
 def test_AC_093_ui_settings_name_the_device_link(hal: MockHal, clock: ManualClock) -> None:

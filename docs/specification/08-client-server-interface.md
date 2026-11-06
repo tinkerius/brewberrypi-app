@@ -155,7 +155,7 @@ Every command gets exactly one reply, sent only to the issuing client:
   | accepted | the command was carried out |
   | invalid | malformed arguments (`IF-051`), a missing recipe id, an answer that is not one of the options (`DOM-032`) |
   | not found | unknown recipe, unknown command or resource |
-  | conflict | not allowed in the current state (matrix in [03](03-brew-process-engine.md) §3.2), or the request is no longer open (`IF-054`) |
+  | conflict | not allowed in the current state (matrix in [03](03-brew-process-engine.md) §3.2), loading a recipe without goals (`ENG-010`), or the request is no longer open (`IF-054`) |
   | forbidden | refused by the same-origin rule (`IF-061`) |
 
   A reply that is not a command's own reply (forbidden, unknown command) has only `success=false` and `message`.

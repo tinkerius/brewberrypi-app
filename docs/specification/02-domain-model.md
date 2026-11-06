@@ -45,7 +45,7 @@ classDiagram
 - `DOM-001` A **recipe** is an immutable definition consisting of
   - `id` — unique short identifier (e.g. `BENIWEISS`, `WaterBoil`); used by the UI to load it.
   - `name` — display name (e.g. `München 12.6 - SUD2:BENIWEISS`).
-  - `goals` — ordered, non-empty list of goal definitions (type + parameters, see [04](04-goal-types.md)); in the recipe file they are in the section `mashing_process` ([07](07-recipes.md) §7.2).
+  - `goals` — ordered list of goal definitions, possibly empty (`Q-34`; a recipe without goals cannot be loaded, `ENG-010`) (type + parameters, see [04](04-goal-types.md)); in the recipe file they are in the section `mashing_process` ([07](07-recipes.md) §7.2).
 - `DOM-002` Recipes are provided by a recipe catalogue (see [07](07-recipes.md)). The catalogue preserves the order in which recipes are defined; this order is used in the UI.
 - `DOM-003` Recipe IDs are unique within the catalogue. Lookup by ID of an unknown ID yields "not found" (never a crash). `[FIX-10]`
 

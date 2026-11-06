@@ -16,6 +16,7 @@ behaviour is fully specified in `docs/specification/`.
 - `docs/specification/` — the specification (`00-index.md` first). Requirement IDs like `ENG-012`, acceptance criteria like `AC-033`.
 - `docs/specification/data/` — normative reference data: `recipes/` (one file per recipe), `config.example.json`, JSON schemas for a recipe, config and messages.
 - `src/brewberrypi/data/` — copies of the spec's JSON schemas and `recipes/`, shipped in the package; a test fails if they differ from `docs/specification/data/` (copy them when the spec data changes).
+- Recipe editor: the public web editor (`tinkerius/brewberrypi-recipeeditor`, https://recipes.brewberrypi.org) copies `recipe.schema.json` and `data/recipes/` and records this repository's commit; when they change, run its `scripts/sync-upstream.sh` (a new goal type or recipe format version also needs its `src/model.ts` and `src/validate.ts`).
 - `docs/recovery/bug-and-deviation-log.md` — `[FIX-nn]` entries: legacy defects the spec deliberately fixes.
 - `docs/adr/` — architecture decision records (copy `0000-template.md`).
 - `docs/implementation-plan.md` — milestones M0–M12 and their acceptance criteria.
@@ -38,7 +39,7 @@ Development happens in the devcontainer (`.devcontainer/`: Debian Trixie, Python
 - The specification is the single source of truth. If it is ambiguous or seems wrong, do not guess: ask, or record it with `/spec-question`.
 - Safety first — this controls a mains-powered heater. Heater off on every path that is not actively controlling temperature, all outputs off before anything else at startup, heater off when the temperature reading is invalid (`docs/specification/10-non-functional-requirements.md` §10.1). Never weaken this, not even in tests or simulation.
 - Never re-introduce a defect listed in `docs/recovery/bug-and-deviation-log.md`.
-- Every change of the recipe file format, also one that only adds something, raises its `version` and adds a migrator from the previous version (`RCP-011`, spec 07 §7.2.1, `src/brewberrypi/recipe_migrations.py`).
+- Every change of the recipe file format, also one that only adds something, raises its `version` and adds a migrator from the previous version (`RCP-011`, spec 07 §7.2.1, `src/brewberrypi/recipe_migrations.py`). The recipe editor (`tinkerius/brewberrypi-recipeeditor`) must follow every change of the format, the schema or the shipped recipes (its `/follow-app-format`); release the app first, then merge the editor, so the deployed editor never writes files the released app skips.
 - User-visible texts (goal names, descriptions, request and reply messages) must match the specification verbatim, including legacy spellings, until question `Q-07` is decided.
 - Every acceptance criterion gets an automated test named after its ID (e.g. `AC-033 start twice is rejected`). Unit tests use the mock HAL and a controllable clock — no real sleeps.
 - GPIO pin numbers are BCM numbers. GPIO access goes through the own libgpiod v2 HAL (chip found by label); do not use gpiozero or lgpio (ADR-0001).

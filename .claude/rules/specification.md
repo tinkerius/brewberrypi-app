@@ -11,4 +11,5 @@ paths:
 - Requirement IDs are stable: never renumber or reuse an ID. New requirements take the next free number of their prefix (prefix table in `docs/specification/00-index.md`).
 - Mark behaviour that did not exist in the legacy system with `[NEW]` and deliberate legacy bug fixes with `[FIX-nn]`.
 - Keep `docs/specification/data/*.json` valid against their schemas, and keep the human-readable tables in `07-recipes.md` in sync with `data/recipes/*.json`.
+- A change of the recipe file format, `data/recipe.schema.json` or the shipped recipes also has to be followed in the recipe editor (`tinkerius/brewberrypi-recipeeditor`, its `/follow-app-format`, after the app release).
 - Use relative Markdown links between documents.
