@@ -92,6 +92,16 @@ describe("state", () => {
     expect(state.process?.state).toBe("Loaded");
   });
 
+  it("UI-084 a successful Cloud Sync reply opens no Information window, a failed one does", () => {
+    for (const command of ["cloudSyncConnect", "cloudSyncDisconnect", "cloudSyncNow"] as const) {
+      expect(addReply(initialState, { command, success: true, message: "Cloud Sync started." }).replies).toEqual([]);
+      const failed = { command, success: false, message: "Cloud Sync is not connected." };
+      expect(addReply(initialState, failed).replies).toEqual([failed]);
+    }
+    const started = { command: "start" as const, success: true, message: "Process started." };
+    expect(addReply(initialState, started).replies).toEqual([started]);
+  });
+
   it("AC-116 takes the Cloud Sync status from the snapshot, then each change", () => {
     let state = receive(initialState, "snapshot", SNAPSHOT);
     expect(state.cloudSync?.state).toBe("disconnected");

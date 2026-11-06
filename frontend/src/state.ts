@@ -81,8 +81,19 @@ export function setConnected(state: AppState, connected: boolean): AppState {
   return { ...state, connected };
 }
 
+const CLOUD_SYNC_COMMANDS: ReadonlySet<CommandReply["command"]> = new Set([
+  "cloudSyncConnect",
+  "cloudSyncDisconnect",
+  "cloudSyncNow",
+]);
+
+/** UI-050, UI-084: every reply is shown, except a successful Cloud Sync one (the top bar shows its effect). */
+export function isShown(reply: CommandReply): boolean {
+  return !(reply.success && CLOUD_SYNC_COMMANDS.has(reply.command));
+}
+
 export function addReply(state: AppState, reply: CommandReply): AppState {
-  return { ...state, replies: [...state.replies, reply] };
+  return isShown(reply) ? { ...state, replies: [...state.replies, reply] } : state;
 }
 
 /** Close the Information modal: the next queued reply, if any, is shown next. */
