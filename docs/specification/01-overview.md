@@ -25,11 +25,12 @@ In scope:
 - `OV-005` Simulation mode without Raspberry Pi hardware (simulated kettle physics).
 - `OV-006` Auxiliary command-line tools for hardware checks and temperature logging (see [12](12-auxiliary-tools.md)).
 - `OV-007` Hardware wiring (pins, relay polarity, sensor) is configurable. `[NEW]`
+- `OV-008` Cloud Sync: the recipes can be mirrored one way from the brewer's cloud storage, where the recipe editor saves them (see [14](14-cloud-sync.md), `Q-35`). Optional; brewing never depends on it. `[NEW]`
 
 Out of scope (not present in the legacy system; see [13](13-open-questions.md) for candidates):
 
-- User accounts, authentication, remote (internet) access.
-- Recipe editing in the UI (recipes are maintained as a file, see [07](07-recipes.md)).
+- User accounts, authentication, remote (internet) access. The only connection to the internet is the optional Cloud Sync (`OV-008`), which the device starts itself.
+- Recipe editing in the UI (recipes are maintained as files, see [07](07-recipes.md); the separate recipe editor writes those files, `OV-008`).
 - Persistence of brew history / logs beyond the auxiliary temperature logger.
 - Multiple kettles, multiple temperature sensors, fermentation control.
 

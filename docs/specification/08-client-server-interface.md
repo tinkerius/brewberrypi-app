@@ -32,8 +32,9 @@
 | `recipe` (one, by id) | `RecipeDetail` | `IF-031` |
 | `chart` | `ChartData` | `IF-040` |
 | `ui` | `UiSettings` | `IF-080` |
+| `cloudSync` | `CloudSyncStatus` | `IF-090` |
 
-Each resource can be read at any time; `hardware`, `process`, `recipes` and `chart` are also pushed (§8.4).
+Each resource can be read at any time; `hardware`, `process`, `recipes`, `chart` and `cloudSync` are also pushed (§8.4).
 
 ### `IF-010` HardwareStatus
 
@@ -126,6 +127,32 @@ Settings of the web UI from the configuration (`Q-30`), read by the UI on every 
 { "deviceLink": "http://{host}:8081/" }
 ```
 
+### `IF-090` CloudSyncStatus `[NEW]`
+
+The state of Cloud Sync ([14](14-cloud-sync.md), `Q-35`).
+
+```json
+{
+  "state": "idle",
+  "provider": "Google Drive",
+  "account": "brewer@example.com",
+  "signIn": null,
+  "lastSync": 1762435200000,
+  "message": null,
+  "issues": [{ "recipe": "Bad", "message": "Not a valid recipe file name." }]
+}
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| `state` | `unavailable`, `disconnected`, `connecting`, `idle`, `syncing`, `offline`, `error` | `unavailable`: not available (`SYNC-001`); `connecting`: waiting for the brewer to allow access (`SYNC-002`); `idle`, `syncing`, `offline`, `error`: connected, between syncs, during one, after one that failed (`SYNC-014`) |
+| `provider` | string | The provider's name, `Google Drive` |
+| `account` | string or `null` | The connected account; `null` when not connected |
+| `signIn` | object or `null` | While `connecting`: `code` (to enter), `url` (where to enter it), `expiresAt` (epoch ms); else `null` |
+| `lastSync` | number or `null` | End of the last successful sync (epoch ms, wall clock, display only) |
+| `message` | string or `null` | Why the last sign-in or sync failed (`SYNC-003`, `SYNC-006`, `SYNC-014`) |
+| `issues` | array | Cloud files that are not synced: `recipe` (the file name without `.json`) and `message` (`SYNC-013`) |
+
 ## 8.3 Commands (request/response)
 
 | Command | Arguments | Engine command |
@@ -137,6 +164,9 @@ Settings of the web UI from the configuration (`Q-30`), read by the UI on every 
 | `resume` | – | `resume` (`ENG-016`) |
 | `stop` | – | `stop` (`ENG-014`) |
 | `respond` | request id + `{ "response": "<option>" }` | `respond` (`ENG-015`, `IF-054`) |
+| `cloudSyncConnect` | – | Cloud Sync: connect (`SYNC-002`, `IF-091`) |
+| `cloudSyncDisconnect` | – | Cloud Sync: disconnect (`SYNC-005`, `IF-091`) |
+| `cloudSyncNow` | – | Cloud Sync: sync now (`SYNC-020`, `IF-091`) |
 
 ### `IF-050` CommandReply `[FIX-15]`
 
@@ -155,7 +185,7 @@ Every command gets exactly one reply, sent only to the issuing client:
   | accepted | the command was carried out |
   | invalid | malformed arguments (`IF-051`), a missing recipe id, an answer that is not one of the options (`DOM-032`) |
   | not found | unknown recipe, unknown command or resource |
-  | conflict | not allowed in the current state (matrix in [03](03-brew-process-engine.md) §3.2), loading a recipe without goals (`ENG-010`), or the request is no longer open (`IF-054`) |
+  | conflict | not allowed in the current state (matrix in [03](03-brew-process-engine.md) §3.2), loading a recipe without goals (`ENG-010`), the request is no longer open (`IF-054`), or a Cloud Sync command in the wrong state (`SYNC-030`) |
   | forbidden | refused by the same-origin rule (`IF-061`) |
 
   A reply that is not a command's own reply (forbidden, unknown command) has only `success=false` and `message`.
@@ -164,6 +194,9 @@ Every command gets exactly one reply, sent only to the issuing client:
 - `IF-054` `[NEW]` `respond` names the request it answers (its `id`, `DOM-035`). An answer for a request that is no
   longer the active one (answered, removed, or replaced by a new question) → conflict,
   `"This request is no longer open."`; the active request stays unanswered.
+- `IF-091` `[NEW]` The Cloud Sync commands `cloudSyncConnect`, `cloudSyncDisconnect` and `cloudSyncNow` take no
+  arguments; their replies are those of `SYNC-030`. Their effect on the status is pushed with the `cloudSync`
+  event (`IF-053`).
 
 ## 8.4 Push channel (events)
 
@@ -171,10 +204,11 @@ Every command gets exactly one reply, sent only to the issuing client:
 
   | Event | Payload | When |
   |---|---|---|
-  | `snapshot` | `Snapshot`: `hardware`, `process`, `recipes`, `chart`, `heartbeatMilliseconds` | first event of every connection (`IF-071`) |
+  | `snapshot` | `Snapshot`: `hardware`, `process`, `recipes`, `chart`, `cloudSync`, `heartbeatMilliseconds` | first event of every connection (`IF-071`) |
   | `hardware` | `HardwareStatus` | when it changed (`IF-072`) |
   | `process` | `ProcessState` | when it changed |
   | `recipes` | `RecipeList` | when it changed |
+| `cloudSync` | `CloudSyncStatus` | when it changed |
   | `chart` | `ChartUpdate` `{ "add": {x, y}, "remove": [x, …] }` | after each chart sample that added a point (`IF-073`) |
   | `ping` | `{}` | every heartbeat period (`IF-074`) |
 - `IF-071` Every (re)connection starts with a `snapshot` of the whole state, so a client never needs the events it

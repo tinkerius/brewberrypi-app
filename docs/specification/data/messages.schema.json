@@ -125,12 +125,13 @@
     "Snapshot": {
       "description": "Event `snapshot`: the first event of every stream (IF-071).",
       "type": "object",
-      "required": ["hardware", "process", "recipes", "chart", "heartbeatMilliseconds"],
+      "required": ["hardware", "process", "recipes", "chart", "cloudSync", "heartbeatMilliseconds"],
       "properties": {
         "hardware": { "$ref": "#/$defs/HardwareStatus" },
         "process": { "$ref": "#/$defs/ProcessState" },
         "recipes": { "$ref": "#/$defs/RecipeList" },
         "chart": { "$ref": "#/$defs/ChartData" },
+        "cloudSync": { "$ref": "#/$defs/CloudSyncStatus" },
         "heartbeatMilliseconds": { "type": "integer", "minimum": 1 }
       },
       "additionalProperties": false
@@ -159,7 +160,12 @@
       "type": "object",
       "required": ["command", "success", "message"],
       "properties": {
-        "command": { "enum": ["load", "unload", "start", "pause", "resume", "stop", "respond"] },
+        "command": {
+          "enum": [
+            "load", "unload", "start", "pause", "resume", "stop", "respond",
+            "cloudSyncConnect", "cloudSyncDisconnect", "cloudSyncNow"
+          ]
+        },
         "success": { "type": "boolean" },
         "message": { "type": "string" }
       },
@@ -183,6 +189,44 @@
         "deviceLink": {
           "description": "ui.deviceLink with {host} not yet replaced (UI-002); null: no link",
           "type": ["string", "null"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "CloudSyncStatus": {
+      "description": "GET /api/cloud-sync and event `cloudSync` (IF-090): the state of Cloud Sync (spec 14).",
+      "type": "object",
+      "required": ["state", "provider", "account", "signIn", "lastSync", "message", "issues"],
+      "properties": {
+        "state": { "enum": ["unavailable", "disconnected", "connecting", "idle", "syncing", "offline", "error"] },
+        "provider": { "type": "string" },
+        "account": { "type": ["string", "null"] },
+        "signIn": {
+          "description": "While connecting: the code to enter, where to enter it, and when it expires (SYNC-002)",
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "required": ["code", "url", "expiresAt"],
+              "properties": {
+                "code": { "type": "string" },
+                "url": { "type": "string" },
+                "expiresAt": { "type": "integer", "description": "epoch milliseconds" }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "lastSync": { "type": ["integer", "null"], "description": "end of the last successful sync, epoch milliseconds" },
+        "message": { "type": ["string", "null"] },
+        "issues": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["recipe", "message"],
+            "properties": { "recipe": { "type": "string" }, "message": { "type": "string" } },
+            "additionalProperties": false
+          }
         }
       },
       "additionalProperties": false

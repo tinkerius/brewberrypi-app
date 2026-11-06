@@ -19,7 +19,7 @@ behaviour is fully specified in `docs/specification/`.
 - Recipe editor: the public web editor (`tinkerius/brewberrypi-recipeeditor`, https://recipes.brewberrypi.org) copies `recipe.schema.json` and `data/recipes/` and records this repository's commit; when they change, run its `scripts/sync-upstream.sh` (a new goal type or recipe format version also needs its `src/model.ts` and `src/validate.ts`).
 - `docs/recovery/bug-and-deviation-log.md` — `[FIX-nn]` entries: legacy defects the spec deliberately fixes.
 - `docs/adr/` — architecture decision records (copy `0000-template.md`).
-- `docs/implementation-plan.md` — milestones M0–M12 and their acceptance criteria.
+- `docs/implementation-plan.md` — milestones M0–M13 and their acceptance criteria.
 - `docs/deployment/runtime-contract.md` — what the container image guarantees to and expects from BrewberryPi OS.
 - Source and test folders: created in milestone M0 (Python package with `uv`, front end with Vite).
 
