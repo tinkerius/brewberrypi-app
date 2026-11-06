@@ -4,7 +4,7 @@
 
 - `RCP-001` Recipes are read only from a **recipe directory** with **one file per recipe** (`Q-27`): the file `<id>.json` holds the recipe with that `id`, so the file name is the recipe id (letters, digits, `_` and `-`) and the file itself has no `id`. The directory is `recipes` by default, configurable with `recipes.directory`, relative to the configuration file's directory (`Q-19`). Only files ending in `.json` are read; hidden files (name starting with `.`), other files and subdirectories are ignored. If the recipe directory does not exist, the application creates it and writes the shipped recipes (`RCP-002`) into it, one file each, so a first start already offers recipes; a recipe file the brewer deletes later is not written again (`Q-29`). If the recipe directory cannot be created or read, the application refuses to start. Format of one file: §7.2 and [data/recipe.schema.json](data/recipe.schema.json). `[NEW]` (legacy: recipes hard-coded in source code)
 - `RCP-002` The shipped recipes MUST be exactly the 2 recipes of [data/recipes/](data/recipes/), `BENIWEISS` and `WaterBoil`, one file each (`Q-32`; legacy: 8 recipes, the other 6 are no longer shipped). The recipe list is sorted by recipe id in character-code order (upper case before lower case): `BENIWEISS`, `WaterBoil` (`Q-27`).
-- `RCP-003` Invalid recipe file (syntax, schema, unknown goal type, missing parameter, file name that is not a valid id, unreadable file, old format with `goals` at the top level — see §7.2) → the application logs a precise error (file, recipe id, goal index) and **skips that recipe**; all other recipes are loaded (`Q-27`). A recipe directory without valid recipes gives an empty recipe list.
+- `RCP-003` Invalid recipe file (syntax, schema, unknown goal type, missing parameter, file name that is not a valid id, unreadable file, old format with `goals` at the top level, format `version` that is invalid or newer than the application supports, failed migration — see §7.2) → the application logs a precise error (file, recipe id, goal index) and **skips that recipe**; all other recipes are loaded (`Q-27`). A recipe directory without valid recipes gives an empty recipe list.
 - `RCP-004` The catalogue is read-only at runtime (no recipe editing in the UI; see `Q-09`).
 - `RCP-005` The list of recipes (`id`, `name`) is published to clients (`IF-030`).
 - `RCP-006` `[NEW]` While it runs, the application checks the recipe directory every `recipes.checkMilliseconds` (default 1000) and reads it again when a recipe file was added, changed or removed (`Q-29`); `RCP-003` applies to the files read again. The new recipe list is pushed to every client (`IF-072`), and `load` uses it. A loaded process keeps the recipe it was loaded from. A recipe directory that disappears is created again as in `RCP-001`; while it cannot be read, the recipe list stays as it is and the error is logged once. (Legacy: recipes changed only with a new program version.)
@@ -16,6 +16,7 @@
 ```json
 {
   "$schema": "../recipe.schema.json",
+  "version": 1,
   "name": "Water Boiling",
   "mashing_process": {
     "goals": [
@@ -27,6 +28,39 @@
 ```
 
 `$schema` is optional and ignored by the application.
+
+### 7.2.1 Format version and migration `[NEW]` (`Q-33`)
+
+- `RCP-008` A recipe file states the version of the recipe file format it is written in, `version`: an integer
+  (1, 2, 3, …). It is optional; a file without `version` is in version 1. The format described in this section
+  is the **latest version**, the one the application reads (table below). When the application writes a
+  recipe file, `version` comes right after `$schema` (first if there is no `$schema`).
+- `RCP-009` A `version` that is not an integer ≥ 1 is invalid (`RCP-003`). A `version` greater than the latest
+  version → the recipe is skipped (`RCP-003`); the error names the file, the recipe, the file's version and the
+  latest version, and says to update the application.
+- `RCP-010` A file in an older version is first checked against the format of its own version (the frozen
+  schema `data/recipe.v<N>.schema.json`), then migrated one version at a time with the migrators of the table
+  below (`N → N+1`, `N+1 → N+2`, … up to the latest version), then checked against the latest format. Errors
+  in the first check are reported like those of a file in the latest version; a migrator that fails or a
+  migrated recipe that is not valid in the latest format → the recipe is skipped (`RCP-003`) and its file is
+  left as it is. Only when all of it succeeds the application writes the file back in the latest version:
+  first a copy of the original file, unchanged, to `.backup/<id>.v<N>.json` in the recipe directory (a hidden
+  subdirectory, so never read as a recipe, `RCP-001`), replacing an older copy of that name, then the migrated
+  recipe to `<id>.json`. Both are written atomically and group-writable (`NFR-023`). If either cannot be
+  written, the migrated recipe is still used, the original file stays as it is and a warning is logged. A file
+  already in the latest version (also one without `version` while the latest version is 1) is never written.
+  The rewritten file counts as a changed recipe file (`RCP-006`) and is read again without migration.
+  > Consequence: after a rollback to an application version with an older latest version, the recipes it
+  > finds in a newer version are skipped (`RCP-009`); the brewer can put the copies from `.backup` back.
+- `RCP-011` Every change of the recipe file format — also one that only adds something, because an
+  application rejects keys it does not know (`RCP-007`) — raises the latest version by one and, in the same
+  change: freezes the schema of the previous version as `data/recipe.v<N>.schema.json`, adds the migrator
+  `N → N+1` with its rule to the table below, updates `data/recipe.schema.json` and the shipped recipes
+  (`RCP-002`) to the new version, and adds acceptance criteria for the migration.
+
+| Version | Since | Change | Migrator from the previous version |
+|---|---|---|---|
+| 1 | 2026-11-06 (`Q-31`, `Q-33`) | `name` and `mashing_process` with `goals`; `version` introduced | – (first version; a file without `version` is in version 1) |
 
 ## 7.3 Goal definition format
 

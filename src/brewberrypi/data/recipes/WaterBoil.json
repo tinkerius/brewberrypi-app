@@ -1,5 +1,6 @@
 {
   "$schema": "../recipe.schema.json",
+  "version": 1,
   "name": "Water Boiling",
   "mashing_process": {
     "goals": [
