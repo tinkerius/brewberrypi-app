@@ -13,7 +13,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from brewberrypi.clock import Clock
 from brewberrypi.config import HardwareConfig
 from brewberrypi.hal import ERROR_BEEP, LONG_BEEP, SHORT_BEEP, BeepPattern, Hal, Temperature, clamp_power
-from brewberrypi.hal.ds18b20 import SensorError, read_sensor
+from brewberrypi.hal.ds18b20 import SensorError, check_reset_value, read_sensor
 from brewberrypi.hal.gpio import LibgpiodOutputs, Output, Outputs
 
 log = logging.getLogger(__name__)
@@ -148,6 +148,8 @@ class RaspberryPiHal(Hal):
         self._startup_wait = sensor.startup_wait_milliseconds / 1000
         self._reading: tuple[float, float] | None = None
         """(temperature, monotonic time) of the last successful read; `None` after a failed read."""
+        self._last_valid: float | None = None
+        """The last successful reading, kept across failed reads (power-on reset value check, HW-031)."""
         self._first_reading = asyncio.Event()
         self._sensor_task: asyncio.Task[None] | None = None
 
@@ -228,11 +230,13 @@ class RaspberryPiHal(Hal):
         while True:
             try:
                 temperature = await self._run_blocking(self._read)
+                check_reset_value(temperature, self._last_valid)  # FIX-27
             except SensorError as error:
                 log.warning("reading DS18b20 sensor failed: %s", error)  # NFR-041
                 self._reading = None
                 await asyncio.wait({self._buzzer.play(ERROR_BEEP)})  # synchronous: throttles retries (HW-042)
             else:
+                self._last_valid = temperature
                 self._reading = (temperature, self._clock.monotonic())
                 self._first_reading.set()
             await self._clock.sleep(self._poll_pause)

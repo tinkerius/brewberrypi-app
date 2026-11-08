@@ -1,4 +1,5 @@
-"""M9: Raspberry Pi HAL with simulated GPIO and sensor (spec 06, CTL-040..046; AC-010..012, AC-020..023).
+"""M9: Raspberry Pi HAL with simulated GPIO and sensor (spec 06, CTL-040..046; AC-010..012, AC-020..023,
+AC-117).
 
 These tests drive the HAL logic with a recording GPIO fake, a fake libgpiod module and a manual clock. The
 acceptance criteria also have to be confirmed once on real hardware (implementation plan, M9).
@@ -16,7 +17,13 @@ import pytest
 
 from brewberrypi.clock import ManualClock
 from brewberrypi.config import load_config
-from brewberrypi.hal.ds18b20 import SensorError, find_sensor_file, parse_w1_slave, read_sensor
+from brewberrypi.hal.ds18b20 import (
+    SensorError,
+    check_reset_value,
+    find_sensor_file,
+    parse_w1_slave,
+    read_sensor,
+)
 from brewberrypi.hal.gpio import GpioError, LibgpiodOutputs, Output, find_chip
 from brewberrypi.hal.raspberry_pi import RaspberryPiHal, duty_phases
 
@@ -336,6 +343,71 @@ async def test_AC_021_failed_read_is_invalid_logged_and_beeped(
     sensor.value = 21.0
     await clock.advance(0.2)  # retried after the beep and the poll pause (HW-033)
     assert hal.get_temperature() == 21.0
+
+
+async def test_AC_117_power_on_reset_value_needs_a_nearby_previous_reading(
+    hal: RaspberryPiHal,
+    clock: ManualClock,
+    outputs: RecordingOutputs,
+    sensor: Sensor,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    sensor.value = 65.0
+    await hal.start()
+    assert hal.get_temperature() == 65.0
+    sensor.value = 85.0  # the plug moved: the sensor restarted and reports its reset value (FIX-27)
+    with caplog.at_level(logging.WARNING):
+        await clock.advance(0.1)
+    assert hal.get_temperature() is None
+    assert "reading DS18b20 sensor failed: 85.0 °C power-on reset value after 65.0 °C" in caplog.text
+    assert outputs.state[BUZZER] is True  # error beep (HW-042)
+    sensor.value = 65.1
+    await clock.advance(0.6)
+    assert outputs.state[BUZZER] is False
+    assert hal.get_temperature() == 65.1
+
+    sensor.value = 84.0
+    await clock.advance(0.1)
+    assert hal.get_temperature() == 84.0
+    sensor.value = SensorError("CRC check failed")  # a failed read in between keeps the last successful one
+    await clock.advance(0.1)
+    assert hal.get_temperature() is None
+    sensor.value = 85.0
+    await clock.advance(0.6)
+    assert hal.get_temperature() == 85.0  # a kettle really heating through 85 °C
+
+
+async def test_AC_117_power_on_reset_value_without_a_previous_reading(
+    hal: RaspberryPiHal, clock: ManualClock, sensor: Sensor
+) -> None:
+    sensor.value = 85.0
+    start = asyncio.create_task(hal.start())
+    await clock.advance(0.1)
+    assert hal.get_temperature() is None  # rejected: not a first reading (HW-034 keeps waiting)
+    sensor.value = 20.0
+    await clock.advance(0.5)  # after the error beep and the poll pause
+    assert hal.get_temperature() == 20.0
+    assert start.done()
+
+
+@pytest.mark.parametrize(
+    ("temperature", "last_valid", "valid"),
+    [
+        (85.0, 83.0, True),
+        (85.0, 87.0, True),
+        (85.0, 82.9, False),
+        (85.0, 87.1, False),
+        (85.0, None, False),
+        (85.1, None, True),  # only the reset value itself is checked
+        (84.9, 20.0, True),
+    ],
+)
+def test_HW_031_reset_value_band(temperature: float, last_valid: float | None, valid: bool) -> None:
+    if valid:
+        check_reset_value(temperature, last_valid)
+    else:
+        with pytest.raises(SensorError, match="power-on reset value"):
+            check_reset_value(temperature, last_valid)
 
 
 async def test_AC_022_reading_older_than_5_s_is_invalid(
