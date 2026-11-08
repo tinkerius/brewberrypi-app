@@ -13,7 +13,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from brewberrypi.clock import Clock
 from brewberrypi.config import HardwareConfig
 from brewberrypi.hal import ERROR_BEEP, LONG_BEEP, SHORT_BEEP, BeepPattern, Hal, Temperature, clamp_power
-from brewberrypi.hal.ds18b20 import SensorError, read_sensor
+from brewberrypi.hal.ds18b20 import ImplausibleResetValue, SensorError, check_reset_value, read_sensor
 from brewberrypi.hal.gpio import LibgpiodOutputs, Output, Outputs
 
 log = logging.getLogger(__name__)
@@ -148,6 +148,8 @@ class RaspberryPiHal(Hal):
         self._startup_wait = sensor.startup_wait_milliseconds / 1000
         self._reading: tuple[float, float] | None = None
         """(temperature, monotonic time) of the last successful read; `None` after a failed read."""
+        self._last_valid: float | None = None
+        """The last successful reading, kept across failed reads (power-on reset value check, HW-031)."""
         self._first_reading = asyncio.Event()
         self._sensor_task: asyncio.Task[None] | None = None
 
@@ -224,15 +226,25 @@ class RaspberryPiHal(Hal):
         self._outputs.set(self._pump_pin, on)
 
     async def _sensor_loop(self) -> None:
-        """Read continuously and cache; a failed read is logged, cached as INVALID and beeped (HW-033)."""
+        """Read continuously and cache; a failed read is logged, cached as INVALID and beeped (HW-033).
+
+        An implausible 85.0 °C (the power-on reset value) is logged and skipped: the cached reading stays as
+        it is while it is fresh, and the reset value counts as a failed read once it is not (HW-031, FIX-27).
+        """
         while True:
             try:
                 temperature = await self._run_blocking(self._read)
+                check_reset_value(temperature, self._last_valid)  # FIX-27
             except SensorError as error:
-                log.warning("reading DS18b20 sensor failed: %s", error)  # NFR-041
-                self._reading = None
-                await asyncio.wait({self._buzzer.play(ERROR_BEEP)})  # synchronous: throttles retries (HW-042)
+                if isinstance(error, ImplausibleResetValue) and self.get_temperature() is not None:
+                    log.warning("reading DS18b20 sensor skipped: %s", error)  # the cached reading stays
+                else:
+                    log.warning("reading DS18b20 sensor failed: %s", error)  # NFR-041
+                    self._reading = None
+                    # Synchronous: the error beep throttles retries (HW-042).
+                    await asyncio.wait({self._buzzer.play(ERROR_BEEP)})
             else:
+                self._last_valid = temperature
                 self._reading = (temperature, self._clock.monotonic())
                 self._first_reading.set()
             await self._clock.sleep(self._poll_pause)

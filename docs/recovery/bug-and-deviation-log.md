@@ -35,6 +35,8 @@ Legacy paths refer to the original Eclipse project `com.brewberrypi` (not part o
 | FIX-25 | Timers use wall-clock `new Date()`; the Pi has no RTC, NTP time jumps after boot distort rests. | `MashGoalBase.pursueTimerange` | Monotonic clock. | NFR-005 |
 | FIX-26 | Duty cycle with a **500 ms** minimum phase: at 50 % power (near the target and during the whole boil) the mechanical heater relay switches about once per second and wears out after a few dozen hours of brewing. | `RaspberryPiHardwareControllerDutyCycleImpl` | Same formula, minimum phase **10 s** (10 s on + 10 s off at 50 %), configurable. See Q-26. | CTL-042, AC-010, AC-011, TOOL-002 |
 
+| FIX-27 | The DS18B20 power-on reset value **85.0 °C** (reported with a valid CRC after a brief loss of sensor power, e.g. a moving plug) is accepted as a real temperature. One such reading ends a `HeatUp` goal with a target ≤ 85 °C and distorts the start temperature of a goal. | `DS18b20SensorImpl` | 85.0 °C is skipped (the last reading stays, warning only) unless the last successful reading was within 2.0 K of it; once the last reading is older than 5 s it counts as a failed read (`Q-06`). | HW-031, HW-032, AC-117 |
+
 (FIX-23 intentionally unused.)
 
 ## Behaviour intentionally **kept** although questionable
