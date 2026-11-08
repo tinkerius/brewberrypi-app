@@ -10,7 +10,7 @@ decimal half-up on the exact decimal value (FIX-01: legacy took the last 6 chara
 0.0 °C).
 
 85.0 °C is also the sensor's power-on reset value, reported with a valid CRC after a brief loss of power (a
-moving plug); it is accepted only next to the last successful reading (FIX-27, Q-06).
+moving plug); it is accepted only next to the last successful reading, otherwise skipped (FIX-27, Q-06).
 """
 
 import re
@@ -28,6 +28,10 @@ RESET_VALUE_BAND = 2.0
 
 class SensorError(Exception):
     """No valid reading; the message is the cause (logged with the warning, HW-033)."""
+
+
+class ImplausibleResetValue(SensorError):
+    """85.0 °C away from the last successful reading: skipped while that reading is fresh (HW-031, FIX-27)."""
 
 
 def parse_w1_slave(content: str) -> float:
@@ -49,9 +53,9 @@ def check_reset_value(temperature: float, last_valid: float | None) -> None:
     if temperature != RESET_VALUE:
         return
     if last_valid is None:
-        raise SensorError("85.0 °C power-on reset value without a previous reading")
+        raise ImplausibleResetValue("85.0 °C power-on reset value without a previous reading")
     if abs(last_valid - RESET_VALUE) > RESET_VALUE_BAND:
-        raise SensorError(f"85.0 °C power-on reset value after {last_valid} °C")
+        raise ImplausibleResetValue(f"85.0 °C power-on reset value after {last_valid} °C")
 
 
 def find_sensor_file(devices_path: Path, sensor_id: str) -> Path:

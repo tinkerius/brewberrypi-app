@@ -25,7 +25,7 @@ controllable/accelerated clock. `T` = temperature reported by the HAL.
 - `AC-021` (HW-031) CRC line ending `NO` → INVALID, warning logged, error beep played.
 - `AC-022` (HW-032) No valid reading for > 5 s → `getTemperature()` INVALID.
 - `AC-023` (HW-013) `sensorId = "auto"` with devices `w1_bus_master1`, `28-0000056291e6` → uses `28-0000056291e6/w1_slave`.
-- `AC-117` (HW-031, HW-032, FIX-27) Last successful reading 65.0 °C, then a reading of 85.0 °C → INVALID, warning logged, error beep played; the next reading 65.1 °C is valid. Last successful reading 84.0 °C (also with a failed read in between) → 85.0 °C is valid. No successful reading since startup → 85.0 °C is INVALID.
+- `AC-117` (HW-031, HW-032, FIX-27) Last successful reading 65.0 °C, then a reading of 85.0 °C → skipped: `getTemperature()` stays 65.0, warning logged, no error beep; the next reading 65.1 °C is valid. 85.0 °C for more than 5 s after the reading of 65.0 °C → INVALID, warning logged, error beep played. Last successful reading 84.0 °C (also with a failed read in between) → 85.0 °C is valid. No successful reading since startup → 85.0 °C is INVALID with an error beep.
 
 ## 11.4 Engine lifecycle and commands
 

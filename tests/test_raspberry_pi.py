@@ -345,7 +345,7 @@ async def test_AC_021_failed_read_is_invalid_logged_and_beeped(
     assert hal.get_temperature() == 21.0
 
 
-async def test_AC_117_power_on_reset_value_needs_a_nearby_previous_reading(
+async def test_AC_117_implausible_reset_value_is_skipped(
     hal: RaspberryPiHal,
     clock: ManualClock,
     outputs: RecordingOutputs,
@@ -358,17 +358,42 @@ async def test_AC_117_power_on_reset_value_needs_a_nearby_previous_reading(
     sensor.value = 85.0  # the plug moved: the sensor restarted and reports its reset value (FIX-27)
     with caplog.at_level(logging.WARNING):
         await clock.advance(0.1)
-    assert hal.get_temperature() is None
-    assert "reading DS18b20 sensor failed: 85.0 °C power-on reset value after 65.0 °C" in caplog.text
-    assert outputs.state[BUZZER] is True  # error beep (HW-042)
+    assert hal.get_temperature() == 65.0  # skipped: the last reading stays
+    assert "reading DS18b20 sensor skipped: 85.0 °C power-on reset value after 65.0 °C" in caplog.text
+    assert outputs.state.get(BUZZER, False) is False  # no error beep
     sensor.value = 65.1
-    await clock.advance(0.6)
-    assert outputs.state[BUZZER] is False
+    await clock.advance(0.1)
     assert hal.get_temperature() == 65.1
 
+
+async def test_AC_117_reset_value_for_more_than_5_s_is_a_failed_read(
+    hal: RaspberryPiHal,
+    clock: ManualClock,
+    outputs: RecordingOutputs,
+    sensor: Sensor,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    sensor.value = 65.0
+    await hal.start()
+    sensor.value = 85.0
+    await clock.advance(4.9)
+    assert hal.get_temperature() == 65.0  # still within staleAfterSeconds
+    assert outputs.state.get(BUZZER, False) is False
+    with caplog.at_level(logging.WARNING):
+        await clock.advance(0.3)
+    assert hal.get_temperature() is None  # HW-032: heater off, Sensor error
+    assert "reading DS18b20 sensor failed: 85.0 °C power-on reset value after 65.0 °C" in caplog.text
+    assert outputs.state[BUZZER] is True  # error beep (HW-042)
+    sensor.value = 65.2
+    await clock.advance(0.6)  # after the error beep and the poll pause
+    assert hal.get_temperature() == 65.2
+
+
+async def test_AC_117_reset_value_next_to_the_last_reading_is_valid(
+    hal: RaspberryPiHal, clock: ManualClock, sensor: Sensor
+) -> None:
     sensor.value = 84.0
-    await clock.advance(0.1)
-    assert hal.get_temperature() == 84.0
+    await hal.start()
     sensor.value = SensorError("CRC check failed")  # a failed read in between keeps the last successful one
     await clock.advance(0.1)
     assert hal.get_temperature() is None
@@ -377,13 +402,14 @@ async def test_AC_117_power_on_reset_value_needs_a_nearby_previous_reading(
     assert hal.get_temperature() == 85.0  # a kettle really heating through 85 °C
 
 
-async def test_AC_117_power_on_reset_value_without_a_previous_reading(
-    hal: RaspberryPiHal, clock: ManualClock, sensor: Sensor
+async def test_AC_117_reset_value_without_a_previous_reading_is_a_failed_read(
+    hal: RaspberryPiHal, clock: ManualClock, outputs: RecordingOutputs, sensor: Sensor
 ) -> None:
     sensor.value = 85.0
     start = asyncio.create_task(hal.start())
     await clock.advance(0.1)
-    assert hal.get_temperature() is None  # rejected: not a first reading (HW-034 keeps waiting)
+    assert hal.get_temperature() is None  # nothing to keep: not a first reading (HW-034 keeps waiting)
+    assert outputs.state[BUZZER] is True
     sensor.value = 20.0
     await clock.advance(0.5)  # after the error beep and the poll pause
     assert hal.get_temperature() == 20.0
