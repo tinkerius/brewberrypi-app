@@ -149,8 +149,9 @@ The list of goals may be empty, for a recipe that is not finished yet: it is lis
 ("has no goals").
 
 A recipe file may also hold the brewer's mashing plan, `mashing` (the rests planned for the mash, each with
-`temperature` and `minutes`, written by the recipe editor's Mashing tab). The application checks it but does not
-use it: the goals alone are brewed.
+`temperature` and `minutes`, written by the recipe editor's Mashing tab) and its `ingredients` (the lists
+`malts` and `hops`, each entry with `name` and `grams`, written by the Ingredients tab). The application checks
+them but does not use them: the goals alone are brewed.
 
 `version` is the version of the recipe file format (today 3; a file without it is in version 1). A
 recipe file in a newer version than the application knows is skipped, and the log says to update the

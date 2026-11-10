@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://brewberrypi.local/schemas/recipe.schema.json",
   "title": "BrewberryPi recipe file",
-  "description": "One recipe per file; the file name without .json is the recipe id (^[A-Za-z0-9_-]+$). The goals are in the section mashing_process (possibly empty, Q-34); mashing is the brewer's mashing plan, design information the application does not use (Q-37). version is the recipe file format version (RCP-008..011): this schema is the latest version; older versions are frozen as recipe.v<N>.schema.json. See docs/specification/07-recipes.md.",
+  "description": "One recipe per file; the file name without .json is the recipe id (^[A-Za-z0-9_-]+$). The goals are in the section mashing_process (possibly empty, Q-34); mashing is the brewer's mashing plan and ingredients the malts and hops, design information the application does not use (Q-37, Q-38). version is the recipe file format version (RCP-008..011): this schema is the latest version; older versions are frozen as recipe.v<N>.schema.json. See docs/specification/07-recipes.md.",
   "type": "object",
   "required": ["name", "mashing_process"],
   "properties": {
@@ -10,7 +10,8 @@
     "version": { "description": "Recipe file format version (RCP-008); optional, a file without it is in version 1 (and migrated).", "const": 3 },
     "name": { "$ref": "#/$defs/text" },
     "mashing_process": { "$ref": "#/$defs/mashingProcess" },
-    "mashing": { "$ref": "#/$defs/mashing" }
+    "mashing": { "$ref": "#/$defs/mashing" },
+    "ingredients": { "$ref": "#/$defs/ingredients" }
   },
   "additionalProperties": false,
   "$defs": {
@@ -42,6 +43,19 @@
       "type": "object",
       "required": ["temperature", "minutes"],
       "properties": { "temperature": { "$ref": "#/$defs/temperature" }, "minutes": { "$ref": "#/$defs/minutes" } },
+      "additionalProperties": false
+    },
+    "ingredients": {
+      "description": "The brewer's ingredients (RCP-013, Q-38): malts and hops in the brewer's order. Not used by the application.",
+      "type": "object",
+      "properties": { "malts": { "$ref": "#/$defs/ingredientList" }, "hops": { "$ref": "#/$defs/ingredientList" } },
+      "additionalProperties": false
+    },
+    "ingredientList": { "type": "array", "items": { "$ref": "#/$defs/ingredient" } },
+    "ingredient": {
+      "type": "object",
+      "required": ["name", "grams"],
+      "properties": { "name": { "$ref": "#/$defs/text" }, "grams": { "description": "Amount in grams.", "type": "integer", "minimum": 1 } },
       "additionalProperties": false
     },
     "temperature": { "type": "number", "minimum": 0, "maximum": 110 },

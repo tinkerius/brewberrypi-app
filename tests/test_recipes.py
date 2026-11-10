@@ -1,5 +1,5 @@
 """M1: recipe catalogue, one file per recipe (RCP-001..012, AC-080, AC-081, AC-084, AC-085, AC-094..101,
-AC-118, AC-119, Q-27, Q-29, Q-33, Q-34, Q-37)."""
+AC-118, AC-119, AC-120, Q-27, Q-29, Q-33, Q-34, Q-37, Q-38)."""
 
 import json
 import logging
@@ -558,6 +558,71 @@ def test_AC_119_an_invalid_mashing_plan_skips_the_recipe(tmp_path: Path, mashing
     )
     recipe_file(
         directory, {"version": 3, "name": "Good", "mashing_process": MASH_IN, "mashing": MASHING}, "Good"
+    )
+    assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Good"]
+
+
+INGREDIENTS = {
+    "malts": [{"name": "Pilsner malt", "grams": 4500}, {"name": "Munich malt", "grams": 500}],
+    "hops": [{"name": "Hallertauer Tradition", "grams": 30}],
+}
+"""Valid ingredients (RCP-013)."""
+
+
+@pytest.mark.parametrize(
+    "ingredients",
+    [INGREDIENTS, {**INGREDIENTS, "hops": []}, {"malts": INGREDIENTS["malts"]}, {}],
+)
+def test_AC_120_valid_ingredients_are_accepted_and_not_used(tmp_path: Path, ingredients: Any) -> None:
+    directory = tmp_path / "recipes"
+    goals = {"goals": [{"type": "HeatUp", "temperature": 62}, {"type": "MashIn"}]}
+    file = recipe_file(
+        directory,
+        {
+            "version": 3,
+            "name": "Brew",
+            "mashing_process": goals,
+            "mashing": MASHING,
+            "ingredients": ingredients,
+        },
+        "Brew",
+    )
+    recipe_file(directory, {"version": 3, "name": "Brew", "mashing_process": goals}, "Plain")
+    before = (file.read_bytes(), file.stat().st_mtime_ns)
+    catalogue = {recipe.id: recipe for recipe in load_recipes(configured(directory))}
+    assert (catalogue["Brew"].name, catalogue["Brew"].goals) == (
+        catalogue["Plain"].name,
+        catalogue["Plain"].goals,
+    )
+    assert (file.read_bytes(), file.stat().st_mtime_ns) == before
+
+
+@pytest.mark.parametrize(
+    "ingredients",
+    [
+        [],
+        {"grains": []},
+        {"malts": {"name": "Pilsner malt", "grams": 4500}},
+        {"malts": [{"grams": 4500}]},
+        {"malts": [{"name": "Pilsner malt"}]},
+        {"malts": [{"name": "", "grams": 4500}]},
+        {"hops": [{"name": "Saaz", "grams": 0}]},
+        {"hops": [{"name": "Saaz", "grams": 12.5}]},
+        {"hops": [{"name": "Saaz", "grams": "30"}]},
+        {"hops": [{"name": "Saaz", "grams": 30, "percent": 100}]},
+    ],
+)
+def test_AC_120_invalid_ingredients_skip_the_recipe(tmp_path: Path, ingredients: Any) -> None:
+    directory = tmp_path / "recipes"
+    recipe_file(
+        directory,
+        {"version": 3, "name": "Bad", "mashing_process": MASH_IN, "ingredients": ingredients},
+        "Bad",
+    )
+    recipe_file(
+        directory,
+        {"version": 3, "name": "Good", "mashing_process": MASH_IN, "ingredients": INGREDIENTS},
+        "Good",
     )
     assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Good"]
 
