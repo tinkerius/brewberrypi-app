@@ -11,7 +11,7 @@
 
 ## 7.2 Recipe file format
 
-- `RCP-007` `[NEW]` A recipe file is a JSON object with the display `name` and the section `mashing_process`, whose `goals` are the recipe's ordered list of goal definitions (§7.3). The list may be empty (`Q-34`): such a recipe is listed and its details can be read, but it cannot be loaded (`ENG-010`); `mashing_process` itself is always required. Sections with recipe design information (e.g. grain bill, hops) are added next to `mashing_process` (`Q-31`); so far there are two, the optional mashing plan `mashing` (`RCP-012`) and the optional `ingredients` (`RCP-013`). Any other key is invalid. The older format with `goals` at the top level is invalid: the error says to move `goals` into `mashing_process` (`RCP-003`).
+- `RCP-007` `[NEW]` A recipe file is a JSON object with the display `name` and the section `mashing_process`, whose `goals` are the recipe's ordered list of goal definitions (§7.3). The list may be empty (`Q-34`): such a recipe is listed and its details can be read, but it cannot be loaded (`ENG-010`); `mashing_process` itself is always required. Sections with recipe design information (e.g. grain bill, hops) are added next to `mashing_process` (`Q-31`); so far there are three, the optional mashing plan `mashing` (`RCP-012`), the optional `ingredients` (`RCP-013`) and the optional `batch` (`RCP-014`). Any other key is invalid. The older format with `goals` at the top level is invalid: the error says to move `goals` into `mashing_process` (`RCP-003`).
 
 ```json
 {
@@ -55,17 +55,28 @@
 
 - `RCP-013` `[NEW]` (`Q-38`) The optional section `ingredients` is the brewer's list of ingredients, written with
   the recipe editor. It is an object with the optional lists `malts` and `hops` and no other key. Each list holds
-  entries in the brewer's order; an entry is an object with exactly `name` (a non-empty string) and `grams` (the
-  amount in grams, an integer ≥ 1), both required. The same name may appear more than once. A list may be empty.
-  Shares of the total weight are not stored: the recipe editor computes them. Like the mashing plan, the
+  entries in the brewer's order; an entry is an object with `name` (a non-empty string) and `grams` (the amount in
+  grams, an integer ≥ 1), both required, and optionally (`Q-39`): for a malt `ebc` (its colour in EBC, a number
+  ≥ 0); for a hop `alpha` (its alpha acid in percent, a number from 0 to 100) and `minutes` (its boil time, an
+  integer ≥ 0). No other key. The same name may appear more than once. A list may be empty. Shares of the total
+  weight, the beer colour and the bitterness are not stored: the recipe editor computes them. Like the mashing plan, the
   ingredients are design information: the application checks them with the schema but does not use them, and a
   migration keeps them.
 
 ```json
 "ingredients": {
-  "malts": [ { "name": "Pilsner malt", "grams": 4500 }, { "name": "Munich malt", "grams": 500 } ],
-  "hops": [ { "name": "Hallertauer Tradition", "grams": 30 } ]
+  "malts": [ { "name": "Pilsner malt", "grams": 4500, "ebc": 3.5 }, { "name": "Munich malt", "grams": 500, "ebc": 15 } ],
+  "hops": [ { "name": "Hallertauer Tradition", "grams": 30, "alpha": 5.5, "minutes": 60 } ]
 }
+```
+
+- `RCP-014` `[NEW]` (`Q-39`) The optional section `batch` describes the brew the recipe is for: an object with the
+  optional `liters` (the wort volume after the boil, a number > 0) and `plato` (the original gravity in °Plato, a
+  number from 0 to 40), no other key. The recipe editor uses them for the beer colour and the bitterness. It is
+  design information: the application checks it with the schema but does not use it, and a migration keeps it.
+
+```json
+"batch": { "liters": 20, "plato": 12.6 }
 ```
 
 ### 7.2.1 Format version and migration `[NEW]` (`Q-33`)
@@ -108,7 +119,7 @@
 |---|---|---|---|
 | 1 | 2026-11-06 (`Q-31`, `Q-33`) | `name` and `mashing_process` with `goals`; `version` introduced | – (first version; a file without `version` is in version 1) |
 | 2 | 2026-11-06 (`Q-34`) | `mashing_process.goals` may be empty | `1 → 2`: no change but `version` (every version-1 recipe is valid in version 2) |
-| 3 | 2026-11-10 (`Q-37`, `Q-38`) | optional mashing plan `mashing` (`RCP-012`) and `ingredients` (`RCP-013`) | `2 → 3`: no change but `version` (every version-2 recipe is valid in version 3) |
+| 3 | 2026-11-10 (`Q-37`, `Q-38`, `Q-39`) | optional mashing plan `mashing` (`RCP-012`), `ingredients` (`RCP-013`) and `batch` (`RCP-014`) | `2 → 3`: no change but `version` (every version-2 recipe is valid in version 3) |
 
 ## 7.3 Goal definition format
 

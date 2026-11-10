@@ -1,5 +1,5 @@
 """M1: recipe catalogue, one file per recipe (RCP-001..012, AC-080, AC-081, AC-084, AC-085, AC-094..101,
-AC-118, AC-119, AC-120, Q-27, Q-29, Q-33, Q-34, Q-37, Q-38)."""
+AC-118, AC-119, AC-120, AC-121, Q-27, Q-29, Q-33, Q-34, Q-37, Q-38, Q-39)."""
 
 import json
 import logging
@@ -624,6 +624,82 @@ def test_AC_120_invalid_ingredients_skip_the_recipe(tmp_path: Path, ingredients:
         {"version": 3, "name": "Good", "mashing_process": MASH_IN, "ingredients": INGREDIENTS},
         "Good",
     )
+    assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Good"]
+
+
+DESIGN = {
+    "ingredients": {
+        "malts": [
+            {"name": "Pilsner malt", "grams": 4500, "ebc": 3.5},
+            {"name": "Rice", "grams": 500, "ebc": 0},
+        ],
+        "hops": [
+            {"name": "Magnum", "grams": 20, "alpha": 5.5, "minutes": 60},
+            {"name": "Dry", "grams": 10, "alpha": 0, "minutes": 0},
+            {"name": "Pure", "grams": 1, "alpha": 100},
+        ],
+    },
+    "batch": {"liters": 20, "plato": 12.6},
+}
+"""Ingredients with colour, alpha acid and boil time, and a batch (RCP-013, RCP-014)."""
+
+
+@pytest.mark.parametrize(
+    "design",
+    [
+        DESIGN,
+        {**DESIGN, "batch": {"liters": 20}},
+        {**DESIGN, "batch": {"plato": 12.6}},
+        {**DESIGN, "batch": {}},
+    ],
+)
+def test_AC_121_colour_bitterness_and_batch_are_accepted_and_not_used(tmp_path: Path, design: Any) -> None:
+    directory = tmp_path / "recipes"
+    file = recipe_file(
+        directory, {"version": 3, "name": "Brew", "mashing_process": MASH_IN, **design}, "Brew"
+    )
+    recipe_file(directory, {"version": 3, "name": "Brew", "mashing_process": MASH_IN}, "Plain")
+    before = (file.read_bytes(), file.stat().st_mtime_ns)
+    catalogue = {recipe.id: recipe for recipe in load_recipes(configured(directory))}
+    assert (catalogue["Brew"].name, catalogue["Brew"].goals) == (
+        catalogue["Plain"].name,
+        catalogue["Plain"].goals,
+    )
+    assert (file.read_bytes(), file.stat().st_mtime_ns) == before
+
+
+def _malt(**fields: Any) -> dict[str, Any]:
+    return {"ingredients": {"malts": [{"name": "M", "grams": 1, **fields}]}}
+
+
+def _hop(**fields: Any) -> dict[str, Any]:
+    return {"ingredients": {"hops": [{"name": "H", "grams": 1, **fields}]}}
+
+
+@pytest.mark.parametrize(
+    "design",
+    [
+        _malt(ebc=-1),
+        _malt(ebc="3"),
+        _malt(alpha=5),
+        _hop(alpha=-0.1),
+        _hop(alpha=100.5),
+        _hop(alpha="5"),
+        _hop(minutes=1.5),
+        _hop(minutes=-1),
+        _hop(ebc=3),
+        {"batch": []},
+        {"batch": {"gallons": 5}},
+        {"batch": {"liters": 0}},
+        {"batch": {"liters": -20}},
+        {"batch": {"plato": -1}},
+        {"batch": {"plato": 40.5}},
+    ],
+)
+def test_AC_121_invalid_colour_bitterness_or_batch_skip_the_recipe(tmp_path: Path, design: Any) -> None:
+    directory = tmp_path / "recipes"
+    recipe_file(directory, {"version": 3, "name": "Bad", "mashing_process": MASH_IN, **design}, "Bad")
+    recipe_file(directory, {"version": 3, "name": "Good", "mashing_process": MASH_IN, **DESIGN}, "Good")
     assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Good"]
 
 

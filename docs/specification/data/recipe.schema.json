@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://brewberrypi.local/schemas/recipe.schema.json",
   "title": "BrewberryPi recipe file",
-  "description": "One recipe per file; the file name without .json is the recipe id (^[A-Za-z0-9_-]+$). The goals are in the section mashing_process (possibly empty, Q-34); mashing is the brewer's mashing plan and ingredients the malts and hops, design information the application does not use (Q-37, Q-38). version is the recipe file format version (RCP-008..011): this schema is the latest version; older versions are frozen as recipe.v<N>.schema.json. See docs/specification/07-recipes.md.",
+  "description": "One recipe per file; the file name without .json is the recipe id (^[A-Za-z0-9_-]+$). The goals are in the section mashing_process (possibly empty, Q-34); mashing is the brewer's mashing plan, ingredients the malts and hops and batch the batch volume and original gravity, design information the application does not use (Q-37, Q-38, Q-39). version is the recipe file format version (RCP-008..011): this schema is the latest version; older versions are frozen as recipe.v<N>.schema.json. See docs/specification/07-recipes.md.",
   "type": "object",
   "required": ["name", "mashing_process"],
   "properties": {
@@ -11,7 +11,8 @@
     "name": { "$ref": "#/$defs/text" },
     "mashing_process": { "$ref": "#/$defs/mashingProcess" },
     "mashing": { "$ref": "#/$defs/mashing" },
-    "ingredients": { "$ref": "#/$defs/ingredients" }
+    "ingredients": { "$ref": "#/$defs/ingredients" },
+    "batch": { "$ref": "#/$defs/batch" }
   },
   "additionalProperties": false,
   "$defs": {
@@ -48,14 +49,41 @@
     "ingredients": {
       "description": "The brewer's ingredients (RCP-013, Q-38): malts and hops in the brewer's order. Not used by the application.",
       "type": "object",
-      "properties": { "malts": { "$ref": "#/$defs/ingredientList" }, "hops": { "$ref": "#/$defs/ingredientList" } },
+      "properties": {
+        "malts": { "type": "array", "items": { "$ref": "#/$defs/malt" } },
+        "hops": { "type": "array", "items": { "$ref": "#/$defs/hop" } }
+      },
       "additionalProperties": false
     },
-    "ingredientList": { "type": "array", "items": { "$ref": "#/$defs/ingredient" } },
-    "ingredient": {
+    "malt": {
       "type": "object",
       "required": ["name", "grams"],
-      "properties": { "name": { "$ref": "#/$defs/text" }, "grams": { "description": "Amount in grams.", "type": "integer", "minimum": 1 } },
+      "properties": {
+        "name": { "$ref": "#/$defs/text" },
+        "grams": { "$ref": "#/$defs/grams" },
+        "ebc": { "description": "Colour in EBC (Q-39).", "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "hop": {
+      "type": "object",
+      "required": ["name", "grams"],
+      "properties": {
+        "name": { "$ref": "#/$defs/text" },
+        "grams": { "$ref": "#/$defs/grams" },
+        "alpha": { "description": "Alpha acid in percent (Q-39).", "type": "number", "minimum": 0, "maximum": 100 },
+        "minutes": { "description": "Boil time (Q-39).", "$ref": "#/$defs/minutes" }
+      },
+      "additionalProperties": false
+    },
+    "grams": { "description": "Amount in grams.", "type": "integer", "minimum": 1 },
+    "batch": {
+      "description": "The batch (RCP-014, Q-39): wort volume after the boil and original gravity. Not used by the application.",
+      "type": "object",
+      "properties": {
+        "liters": { "type": "number", "exclusiveMinimum": 0 },
+        "plato": { "type": "number", "minimum": 0, "maximum": 40 }
+      },
       "additionalProperties": false
     },
     "temperature": { "type": "number", "minimum": 0, "maximum": 110 },
