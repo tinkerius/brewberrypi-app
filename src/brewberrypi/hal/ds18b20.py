@@ -8,6 +8,9 @@ A `w1_slave` file looks like this:
 The first line must end in `YES`; the temperature is the integer after `t=` in milli-°C, rounded to one
 decimal half-up on the exact decimal value (FIX-01: legacy took the last 6 characters and read 100.000 °C as
 0.0 °C).
+
+85.0 °C is also the sensor's power-on reset value, reported with a valid CRC after a brief loss of power (a
+moving plug); it is accepted only next to the last successful reading, otherwise skipped (FIX-27, Q-06).
 """
 
 import re
@@ -17,10 +20,18 @@ from pathlib import Path
 AUTO = "auto"
 FAMILY_PREFIX = "28-"
 _TEMPERATURE = re.compile(r"t=(-?\d+)\s*$")
+RESET_VALUE = 85.0
+"""°C the DS18B20 holds after power-up (HW-031)."""
+RESET_VALUE_BAND = 2.0
+"""K: 85.0 °C is plausible only this close to the last successful reading (HW-031, FIX-27)."""
 
 
 class SensorError(Exception):
     """No valid reading; the message is the cause (logged with the warning, HW-033)."""
+
+
+class ImplausibleResetValue(SensorError):
+    """85.0 °C away from the last successful reading: skipped while that reading is fresh (HW-031, FIX-27)."""
 
 
 def parse_w1_slave(content: str) -> float:
@@ -35,6 +46,16 @@ def parse_w1_slave(content: str) -> float:
         raise SensorError(f"no temperature in {lines[1].strip()!r}")
     milli = Decimal(int(match.group(1)))
     return float((milli / 1000).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP))
+
+
+def check_reset_value(temperature: float, last_valid: float | None) -> None:
+    """Reject 85.0 °C unless the last successful reading was within RESET_VALUE_BAND (HW-031, FIX-27)."""
+    if temperature != RESET_VALUE:
+        return
+    if last_valid is None:
+        raise ImplausibleResetValue("85.0 °C power-on reset value without a previous reading")
+    if abs(last_valid - RESET_VALUE) > RESET_VALUE_BAND:
+        raise ImplausibleResetValue(f"85.0 °C power-on reset value after {last_valid} °C")
 
 
 def find_sensor_file(devices_path: Path, sensor_id: str) -> Path:

@@ -86,7 +86,7 @@ wheels = [
 
 [[package]]
 name = "brewberrypi"
-version = "0.1.0a14"
+version = "0.1.0a17"
 source = { editable = "." }
 dependencies = [
     { name = "fastjsonschema" },

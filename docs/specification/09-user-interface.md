@@ -91,7 +91,7 @@ with blue headers and a dark navbar titled **Brewberry Pi**.)
 
 ## 9.6 Information modal
 
-- `UI-050` Every command reply (`IF-050`) is shown in a modal dialog titled **Information** with the reply `message` and a **Confirm** button that closes it. `[FIX-15]` A command that does not reach the server shows `No connection to the server.` `[NEW]`
+- `UI-050` Every command reply (`IF-050`) is shown in a modal dialog titled **Information** with the reply `message` and a **Confirm** button that closes it. `[FIX-15]` A command that does not reach the server shows `No connection to the server.` `[NEW]` Exception: successful replies of the Cloud Sync commands (`UI-084`).
   (Phase 2 MAY show successful replies as a non-blocking toast and only errors as modal — see `Q-11`.)
 
 ## 9.7 Connection handling
@@ -138,6 +138,8 @@ panel below the Brewing Process panel). Its content follows the `cloudSync` stat
   `Sync now` (`cloudSyncNow`, disabled during a sync) and `Disconnect` (`cloudSyncDisconnect`). The issues
   (`SYNC-013`) are listed under the heading `Not synced`, one line `<recipe>: <message>` each.
 - `UI-084` A `message` (`IF-090`) is shown in the menu as an alert in every state. Times are shown in the
-  browser's local time (`HH:MM:SS`). The replies of the Cloud Sync commands appear like every reply (`UI-050`).
+  browser's local time (`HH:MM:SS`). Only a reply of a Cloud Sync command that did not succeed is shown in the
+  Information modal (`UI-050`); a successful one is not, because the top bar shows its effect (product-owner
+  decision 2026-11-06).
 - `UI-085` A sync in progress is visible in the top bar: the pictogram spins while the state is `syncing`, and for
   at least 1.5 s after a sync started, so a sync that takes only a moment is still seen.
