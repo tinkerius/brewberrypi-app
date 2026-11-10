@@ -9,7 +9,8 @@ own version's schema, migrated one version at a time and checked against the lat
 To change the format (RCP-011): copy `recipe.schema.json` to `recipe.v<LATEST_VERSION>.schema.json`, change
 `recipe.schema.json` (with `"version": {"const": <new>}`), add the migrator `MIGRATORS[<old>]`, raise
 `LATEST_VERSION`, update the shipped recipes and the version table of spec 7.2.1, and copy the data to
-`src/brewberrypi/data/`.
+`src/brewberrypi/data/`. The version is raised at most once between two releases (Q-36): if `LATEST_VERSION`
+is not in a release yet, amend its schema, migrator and table row instead of adding another version.
 """
 
 import copy

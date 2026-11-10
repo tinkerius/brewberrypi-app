@@ -53,10 +53,17 @@
   > Consequence: after a rollback to an application version with an older latest version, the recipes it
   > finds in a newer version are skipped (`RCP-009`); the brewer can put the copies from `.backup` back.
 - `RCP-011` Every change of the recipe file format — also one that only adds something, because an
-  application rejects keys it does not know (`RCP-007`) — raises the latest version by one and, in the same
-  change: freezes the schema of the previous version as `data/recipe.v<N>.schema.json`, adds the migrator
-  `N → N+1` with its rule to the table below, updates `data/recipe.schema.json` and the shipped recipes
-  (`RCP-002`) to the new version, and adds acceptance criteria for the migration.
+  application rejects keys it does not know (`RCP-007`) — needs a new latest version, but the latest version is
+  raised **at most once between two releases of the application** (`Q-36`; a pre-release counts as a release).
+  The first change after a release raises the latest version by one and, in the same change: freezes the
+  schema of the previous version as `data/recipe.v<N>.schema.json`, adds the migrator `N → N+1` with its rule
+  to the table below, updates `data/recipe.schema.json` and the shipped recipes (`RCP-002`) to the new version,
+  and adds acceptance criteria for the migration. Every further change before the next release changes that
+  still unreleased version in place: it amends `data/recipe.schema.json`, the migrator `N → N+1` and its row in
+  the table below, the shipped recipes and the migration's acceptance criteria; the frozen schemas stay as they
+  are. A version is released once a release of the application reads it.
+  > Consequence: a file written by an unreleased build in an earlier draft of the unreleased version may be
+  > invalid in the released one; released applications never see such a draft.
 
 | Version | Since | Change | Migrator from the previous version |
 |---|---|---|---|
