@@ -19,6 +19,7 @@ from brewberrypi.cloud_sync.provider import (
     SignInPending,
 )
 from brewberrypi.cloud_sync.service import CREDENTIALS_FILE, STATE_DIRECTORY, CloudSync
+from brewberrypi.recipe_migrations import LATEST_VERSION
 
 REFRESH_TOKEN = "1//secret-refresh-token"
 ACCOUNT = "brewer@example.com"
@@ -26,7 +27,9 @@ USER_CODE = "WXYZ-ABCD"
 DEVICE_CODE = "device-code-secret"
 
 
-def recipe_bytes(name: str, goals: list[dict[str, Any]] | None = None, version: int | None = 2) -> bytes:
+def recipe_bytes(
+    name: str, goals: list[dict[str, Any]] | None = None, version: int | None = LATEST_VERSION
+) -> bytes:
     recipe: dict[str, Any] = {} if version is None else {"version": version}
     recipe |= {"name": name, "mashing_process": {"goals": goals or [{"type": "MashIn"}]}}
     return (json.dumps(recipe, indent=2) + "\n").encode()

@@ -92,7 +92,7 @@ def test_AC_031_unknown_recipe_or_missing_parameter_is_rejected(engine: Engine) 
 
 
 async def test_AC_100_a_recipe_without_goals_cannot_be_loaded(hal: MockHal, clock: ManualClock) -> None:
-    empty = parse_recipe("Draft", '{"version": 2, "name": "Draft", "mashing_process": {"goals": []}}', "test")
+    empty = parse_recipe("Draft", '{"version": 3, "name": "Draft", "mashing_process": {"goals": []}}', "test")
     catalogue = RecipeCatalogue(recipes=(*CATALOGUE.recipes, empty), source="test")
     engine = Engine(hal, clock, catalogue, CONFIG)
     try:

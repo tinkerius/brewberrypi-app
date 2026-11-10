@@ -130,7 +130,7 @@ The goals are in the section `mashing_process`, so that recipe design informatio
 
 ```json
 {
-  "version": 2,
+  "version": 3,
   "name": "Water Boiling",
   "mashing_process": {
     "goals": [
@@ -148,7 +148,11 @@ writes the shipped recipes again (recipes of your own are then lost).
 The list of goals may be empty, for a recipe that is not finished yet: it is listed, but loading it is refused
 ("has no goals").
 
-`version` is the version of the recipe file format (today 2; a file without it is in version 1). A
+A recipe file may also hold the brewer's mashing plan, `mashing` (the rests planned for the mash, each with
+`temperature` and `minutes`, written by the recipe editor's Mashing tab). The application checks it but does not
+use it: the goals alone are brewed.
+
+`version` is the version of the recipe file format (today 3; a file without it is in version 1). A
 recipe file in a newer version than the application knows is skipped, and the log says to update the
 application. A file in an older version is migrated to the latest version and written back; the original is kept
 in the hidden folder `.backup` of the recipe directory (`<id>.v<old version>.json`). After going back to an older

@@ -1,5 +1,5 @@
-"""M1: recipe catalogue, one file per recipe (RCP-001..011, AC-080, AC-081, AC-084, AC-085, AC-094..101,
-Q-27, Q-29, Q-33, Q-34)."""
+"""M1: recipe catalogue, one file per recipe (RCP-001..012, AC-080, AC-081, AC-084, AC-085, AC-094..101,
+AC-118, AC-119, Q-27, Q-29, Q-33, Q-34, Q-37)."""
 
 import json
 import logging
@@ -477,7 +477,9 @@ def test_AC_095_a_file_in_the_latest_version_is_not_written(tmp_path: Path) -> N
 
 
 @pytest.mark.parametrize("with_version_1", [True, False])
-def test_AC_101_a_version_1_file_is_written_back_as_version_2(tmp_path: Path, with_version_1: bool) -> None:
+def test_AC_101_a_version_1_file_is_written_back_in_the_latest_version(
+    tmp_path: Path, with_version_1: bool
+) -> None:
     directory = tmp_path / "recipes"
     original = {
         "$schema": "../recipe.schema.json",
@@ -491,27 +493,94 @@ def test_AC_101_a_version_1_file_is_written_back_as_version_2(tmp_path: Path, wi
     assert (recipe.name, [goal.type for goal in recipe.goals]) == ("Old", ["HeatUp", "MashIn"])
     written = json.loads(file.read_text())
     assert list(written)[:2] == ["$schema", "version"]
-    assert written == {**original, "version": 2}
+    assert written == {**original, "version": 3}
     assert (directory / BACKUP_DIRECTORY / "Old.v1.json").read_text() == original_text
+
+
+def test_AC_118_a_version_2_file_is_written_back_as_version_3(tmp_path: Path) -> None:
+    directory = tmp_path / "recipes"
+    original = {
+        "$schema": "../recipe.schema.json",
+        "version": 2,
+        "name": "Old",
+        "mashing_process": {"goals": [{"type": "HeatUp", "temperature": 62}, {"type": "MashIn"}]},
+    }
+    file = recipe_file(directory, original, "Old")
+    original_text = file.read_text()
+    [recipe] = load_recipes(configured(directory))
+    assert (recipe.name, [goal.type for goal in recipe.goals]) == ("Old", ["HeatUp", "MashIn"])
+    written = json.loads(file.read_text())
+    assert list(written)[:2] == ["$schema", "version"]
+    assert written == {**original, "version": 3}
+    assert (directory / BACKUP_DIRECTORY / "Old.v2.json").read_text() == original_text
+
+
+MASHING = {"MaltoseRest": {"temperature": 63, "minutes": 45}, "MashOut": {"temperature": 78, "minutes": 10}}
+"""A valid mashing plan (RCP-012)."""
+
+
+def test_AC_119_a_valid_mashing_plan_is_accepted_and_not_used(tmp_path: Path) -> None:
+    directory = tmp_path / "recipes"
+    goals = {"goals": [{"type": "HeatUp", "temperature": 62}, {"type": "MashIn"}]}
+    file = recipe_file(
+        directory, {"version": 3, "name": "Plan", "mashing_process": goals, "mashing": MASHING}, "Plan"
+    )
+    recipe_file(directory, {"version": 3, "name": "Plan", "mashing_process": goals}, "NoPlan")
+    before = (file.read_bytes(), file.stat().st_mtime_ns)
+    catalogue = {recipe.id: recipe for recipe in load_recipes(configured(directory))}
+    assert (catalogue["Plan"].name, catalogue["Plan"].goals) == (
+        catalogue["NoPlan"].name,
+        catalogue["NoPlan"].goals,
+    )
+    assert (file.read_bytes(), file.stat().st_mtime_ns) == before
+    assert not (directory / BACKUP_DIRECTORY).exists()
+
+
+@pytest.mark.parametrize(
+    "mashing",
+    [
+        [],
+        "MaltoseRest",
+        {"MainRest": {"temperature": 63, "minutes": 45}},
+        {"MaltoseRest": {"minutes": 45}},
+        {"MaltoseRest": {"temperature": 63}},
+        {"MaltoseRest": {"temperature": 111, "minutes": 45}},
+        {"MaltoseRest": {"temperature": "63", "minutes": 45}},
+        {"MaltoseRest": {"temperature": 63, "minutes": 4.5}},
+        {"MaltoseRest": {"temperature": 63, "minutes": -1}},
+        {"MaltoseRest": {"temperature": 63, "minutes": 45, "name": "Maltoserast"}},
+    ],
+)
+def test_AC_119_an_invalid_mashing_plan_skips_the_recipe(tmp_path: Path, mashing: Any) -> None:
+    directory = tmp_path / "recipes"
+    recipe_file(
+        directory, {"version": 3, "name": "Bad", "mashing_process": MASH_IN, "mashing": mashing}, "Bad"
+    )
+    recipe_file(
+        directory, {"version": 3, "name": "Good", "mashing_process": MASH_IN, "mashing": MASHING}, "Good"
+    )
+    assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Good"]
 
 
 def test_AC_100_a_recipe_without_goals_is_listed(tmp_path: Path) -> None:
     directory = tmp_path / "recipes"
-    recipe_file(directory, {"version": 2, "name": "Draft", "mashing_process": {"goals": []}}, "Draft")
-    recipe_file(directory, {"version": 2, "name": "No section"}, "NoSection")
+    recipe_file(
+        directory, {"version": LATEST_VERSION, "name": "Draft", "mashing_process": {"goals": []}}, "Draft"
+    )
+    recipe_file(directory, {"version": LATEST_VERSION, "name": "No section"}, "NoSection")
     write_recipe(directory, [], recipe_id="OldEmpty")  # version 1 needs a goal: skipped before migrating
     catalogue = load_recipes(configured(directory))
     assert [(recipe.id, recipe.goals) for recipe in catalogue] == [("Draft", ())]
 
 
 def test_RCP_008_the_shipped_recipes_are_in_the_latest_version() -> None:
-    assert LATEST_VERSION == 2
+    assert LATEST_VERSION == 3
     for file in (SPEC_DATA / "recipes").iterdir():
         assert json.loads(file.read_text())["version"] == LATEST_VERSION
     for file in TEST_RECIPES.glob("*.json"):  # else the tests would migrate these files in place
         assert json.loads(file.read_text())["version"] == LATEST_VERSION
     assert (
-        read_recipe("R", json.dumps({"version": 2, "name": "x", "mashing_process": MASH_IN}), "R").migrated
+        read_recipe("R", json.dumps({"version": 3, "name": "x", "mashing_process": MASH_IN}), "R").migrated
         is None
     )
 

@@ -11,12 +11,12 @@
 
 ## 7.2 Recipe file format
 
-- `RCP-007` `[NEW]` A recipe file is a JSON object with the display `name` and the section `mashing_process`, whose `goals` are the recipe's ordered list of goal definitions (§7.3). The list may be empty (`Q-34`): such a recipe is listed and its details can be read, but it cannot be loaded (`ENG-010`); `mashing_process` itself is always required. Sections with recipe design information (e.g. grain bill, hops) may be added next to `mashing_process` later; until the schema defines them, any other key is invalid (`Q-31`). The older format with `goals` at the top level is invalid: the error says to move `goals` into `mashing_process` (`RCP-003`).
+- `RCP-007` `[NEW]` A recipe file is a JSON object with the display `name` and the section `mashing_process`, whose `goals` are the recipe's ordered list of goal definitions (§7.3). The list may be empty (`Q-34`): such a recipe is listed and its details can be read, but it cannot be loaded (`ENG-010`); `mashing_process` itself is always required. Sections with recipe design information (e.g. grain bill, hops) are added next to `mashing_process` (`Q-31`); so far there is one, the optional mashing plan `mashing` (`RCP-012`). Any other key is invalid. The older format with `goals` at the top level is invalid: the error says to move `goals` into `mashing_process` (`RCP-003`).
 
 ```json
 {
   "$schema": "../recipe.schema.json",
-  "version": 2,
+  "version": 3,
   "name": "Water Boiling",
   "mashing_process": {
     "goals": [
@@ -28,6 +28,30 @@
 ```
 
 `$schema` is optional and ignored by the application.
+
+- `RCP-012` `[NEW]` (`Q-37`) The optional section `mashing` is the brewer's **mashing plan**: the rests the brewer
+  plans for the mash, written with the recipe editor. It is an object whose keys are rest ids from the table
+  below, each at most once; any other key is invalid. Each value is an object with exactly `temperature` (°C, a
+  number from 0 to 110) and `minutes` (an integer ≥ 0), both required. The order of the keys has no meaning; the
+  recipe editor writes them in the order of the table. The mashing plan is design information: the application
+  checks it with the schema but does not use it (it does not change the goals, the recipe list or the recipe
+  details, `IF-031`), and a migration keeps it.
+
+| Rest id | Rest |
+|---|---|
+| `PreMash` | Pre-mash / Dough-in rest (soaking) |
+| `AcidRest` | Acid rest / Phytase rest |
+| `BetaGlucanRest` | Beta-glucan rest (gum rest) |
+| `FerulicAcidRest` | Ferulic acid rest |
+| `ProteinRest` | Protein rest (protease rest) |
+| `MaltoseRest` | Maltose rest (beta-amylase rest) |
+| `CombinedRest` | Combined rest (single infusion) |
+| `SaccharificationRest` | Saccharification rest (dextrinization / alpha-amylase rest) |
+| `MashOut` | Mash-out |
+
+```json
+"mashing": { "MaltoseRest": { "temperature": 63, "minutes": 45 }, "SaccharificationRest": { "temperature": 72, "minutes": 30 } }
+```
 
 ### 7.2.1 Format version and migration `[NEW]` (`Q-33`)
 
@@ -69,6 +93,7 @@
 |---|---|---|---|
 | 1 | 2026-11-06 (`Q-31`, `Q-33`) | `name` and `mashing_process` with `goals`; `version` introduced | – (first version; a file without `version` is in version 1) |
 | 2 | 2026-11-06 (`Q-34`) | `mashing_process.goals` may be empty | `1 → 2`: no change but `version` (every version-1 recipe is valid in version 2) |
+| 3 | 2026-11-10 (`Q-37`) | optional mashing plan `mashing` (`RCP-012`) | `2 → 3`: no change but `version` (every version-2 recipe is valid in version 3) |
 
 ## 7.3 Goal definition format
 

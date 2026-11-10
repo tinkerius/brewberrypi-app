@@ -2,14 +2,15 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://brewberrypi.local/schemas/recipe.schema.json",
   "title": "BrewberryPi recipe file",
-  "description": "One recipe per file; the file name without .json is the recipe id (^[A-Za-z0-9_-]+$). The goals are in the section mashing_process (possibly empty, Q-34); sections with recipe design information may be added later. version is the recipe file format version (RCP-008..011): this schema is the latest version; older versions are frozen as recipe.v<N>.schema.json. See docs/specification/07-recipes.md.",
+  "description": "One recipe per file; the file name without .json is the recipe id (^[A-Za-z0-9_-]+$). The goals are in the section mashing_process (possibly empty, Q-34); mashing is the brewer's mashing plan, design information the application does not use (Q-37). version is the recipe file format version (RCP-008..011): this schema is the latest version; older versions are frozen as recipe.v<N>.schema.json. See docs/specification/07-recipes.md.",
   "type": "object",
   "required": ["name", "mashing_process"],
   "properties": {
     "$schema": { "type": "string" },
-    "version": { "description": "Recipe file format version (RCP-008); optional, a file without it is in version 1 (and migrated).", "const": 2 },
+    "version": { "description": "Recipe file format version (RCP-008); optional, a file without it is in version 1 (and migrated).", "const": 3 },
     "name": { "$ref": "#/$defs/text" },
-    "mashing_process": { "$ref": "#/$defs/mashingProcess" }
+    "mashing_process": { "$ref": "#/$defs/mashingProcess" },
+    "mashing": { "$ref": "#/$defs/mashing" }
   },
   "additionalProperties": false,
   "$defs": {
@@ -19,6 +20,28 @@
       "properties": {
         "goals": { "description": "May be empty (Q-34): such a recipe is listed but cannot be loaded.", "type": "array", "items": { "$ref": "#/$defs/goal" } }
       },
+      "additionalProperties": false
+    },
+    "mashing": {
+      "description": "The mashing plan (RCP-012, Q-37): the rests the brewer plans, each at most once, keyed by rest id. Not used by the application.",
+      "type": "object",
+      "properties": {
+        "PreMash": { "$ref": "#/$defs/mashRest" },
+        "AcidRest": { "$ref": "#/$defs/mashRest" },
+        "BetaGlucanRest": { "$ref": "#/$defs/mashRest" },
+        "FerulicAcidRest": { "$ref": "#/$defs/mashRest" },
+        "ProteinRest": { "$ref": "#/$defs/mashRest" },
+        "MaltoseRest": { "$ref": "#/$defs/mashRest" },
+        "CombinedRest": { "$ref": "#/$defs/mashRest" },
+        "SaccharificationRest": { "$ref": "#/$defs/mashRest" },
+        "MashOut": { "$ref": "#/$defs/mashRest" }
+      },
+      "additionalProperties": false
+    },
+    "mashRest": {
+      "type": "object",
+      "required": ["temperature", "minutes"],
+      "properties": { "temperature": { "$ref": "#/$defs/temperature" }, "minutes": { "$ref": "#/$defs/minutes" } },
       "additionalProperties": false
     },
     "temperature": { "type": "number", "minimum": 0, "maximum": 110 },

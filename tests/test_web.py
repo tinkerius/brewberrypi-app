@@ -366,7 +366,7 @@ def test_rest_reads(hal: MockHal, clock: ManualClock) -> None:
 
 
 def test_AC_100_a_recipe_without_goals_is_listed_but_not_loaded(hal: MockHal, clock: ManualClock) -> None:
-    empty = parse_recipe("Draft", '{"version": 2, "name": "Draft", "mashing_process": {"goals": []}}', "test")
+    empty = parse_recipe("Draft", '{"version": 3, "name": "Draft", "mashing_process": {"goals": []}}', "test")
     catalogue = RecipeCatalogue(recipes=(empty, *CATALOGUE.recipes), source="test")
     with TestClient(create_app(CONFIG, catalogue, hal, clock)) as http:
         assert "Draft" in [recipe["id"] for recipe in http.get("/api/recipes").json()]

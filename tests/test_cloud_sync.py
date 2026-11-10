@@ -21,6 +21,7 @@ from brewberrypi.cloud_sync.service import (
     notice_text,
 )
 from brewberrypi.config import load_config
+from brewberrypi.recipe_migrations import LATEST_VERSION
 from brewberrypi.web.messages import validator
 from cloud_fixtures import (
     ACCOUNT,
@@ -358,7 +359,7 @@ async def test_AC_106_an_older_format_version_is_written_in_the_latest(
     cloud.put("OLD.json", recipe_bytes("Old", version=None))
     sync: CloudSync = await start()
     written = json.loads(recipes(tmp_path)["OLD.json"])
-    assert written == {"version": 2, "name": "Old", "mashing_process": {"goals": [{"type": "MashIn"}]}}
+    assert written == {"version": 3, "name": "Old", "mashing_process": {"goals": [{"type": "MashIn"}]}}
     assert backup(tmp_path) == {}
     assert sync.status()["issues"] == []
 
@@ -386,7 +387,10 @@ async def test_AC_106_cloud_files_this_app_cannot_read_are_not_synced(
     assert issues["bad name"] == "Not a valid recipe file name."
     assert issues["TWICE"] == "More than one file in Google Drive has this name."
     assert issues["BROKEN"].startswith("Google Drive: BrewberryPi/recipes/BROKEN.json:1:2: invalid JSON")
-    assert "format version 99 is newer than this application supports (latest 2)" in issues["NEWER"]
+    assert (
+        f"format version 99 is newer than this application supports (latest {LATEST_VERSION})"
+        in issues["NEWER"]
+    )
     assert status["state"] == "idle"
 
 

@@ -33,7 +33,7 @@ Migrator = Callable[[RecipeData], RecipeData]
 Validator = Callable[[Any], Any]
 """Checks a recipe against the schema of one version; raises `fastjsonschema.JsonSchemaValueException`."""
 
-LATEST_VERSION = 2
+LATEST_VERSION = 3
 """The recipe file format version this application reads (spec 7.2.1)."""
 
 
@@ -42,7 +42,12 @@ def _v1_to_v2(raw: RecipeData) -> RecipeData:
     return raw
 
 
-MIGRATORS: dict[int, Migrator] = {1: _v1_to_v2}
+def _v2_to_v3(raw: RecipeData) -> RecipeData:
+    """Version 3 adds the optional mashing plan `mashing` (Q-37, RCP-012); every version-2 recipe is valid."""
+    return raw
+
+
+MIGRATORS: dict[int, Migrator] = {1: _v1_to_v2, 2: _v2_to_v3}
 """The migrator from version `N` (the key) to `N+1`, one for each version below `LATEST_VERSION`."""
 
 
