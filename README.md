@@ -150,7 +150,8 @@ The list of goals may be empty, for a recipe that is not finished yet: it is lis
 
 A recipe file may also hold the brewer's mashing plan, `mashing` (the rests planned for the mash, each with
 `temperature` and `minutes`, written by the recipe editor's Mashing tab), its `ingredients` (the lists
-`malts` and `hops`, each entry with `name` and `grams`, a malt also `ebc`, a hop `alpha` and `minutes`) and
+`malts`, `hops` and `others`, each entry with `name` and `grams`, a malt also `ebc`, a hop `alpha` and
+`minutes`, another boil addition `minutes`) and
 its `batch` (`liters`, the knockout volume, `plato` and `final_plato`, the original and final gravity), written by the recipe editor's Malt and Hops tabs,
 and its `water` (`mash`, `sparge` and `top_up` in litres, the Water tab). The application checks
 them but does not use them: the goals alone are brewed.

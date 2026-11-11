@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://brewberrypi.local/schemas/recipe.schema.json",
   "title": "BrewberryPi recipe file",
-  "description": "One recipe per file; the file name without .json is the recipe id (^[A-Za-z0-9_-]+$). The goals are in the section mashing_process (possibly empty, Q-34); mashing is the brewer's mashing plan, ingredients the malts and hops batch the knockout volume and original gravity and water the brewing-day water volumes, design information the application does not use (Q-37, Q-38, Q-39, Q-40). version is the recipe file format version (RCP-008..011): this schema is the latest version; older versions are frozen as recipe.v<N>.schema.json. See docs/specification/07-recipes.md.",
+  "description": "One recipe per file; the file name without .json is the recipe id (^[A-Za-z0-9_-]+$). The goals are in the section mashing_process (possibly empty, Q-34); mashing is the brewer's mashing plan, ingredients the malts, hops and other boil additions, batch the knockout volume and the original and final gravity, and water the brewing-day water volumes: design information the application does not use (Q-37..Q-42). version is the recipe file format version (RCP-008..011): this schema is the latest version; older versions are frozen as recipe.v<N>.schema.json. See docs/specification/07-recipes.md.",
   "type": "object",
   "required": ["name", "mashing_process"],
   "properties": {
@@ -52,7 +52,8 @@
       "type": "object",
       "properties": {
         "malts": { "type": "array", "items": { "$ref": "#/$defs/malt" } },
-        "hops": { "type": "array", "items": { "$ref": "#/$defs/hop" } }
+        "hops": { "type": "array", "items": { "$ref": "#/$defs/hop" } },
+        "others": { "description": "Other boil additions (Q-42).", "type": "array", "items": { "$ref": "#/$defs/other" } }
       },
       "additionalProperties": false
     },
@@ -74,6 +75,17 @@
         "grams": { "$ref": "#/$defs/grams" },
         "alpha": { "description": "Alpha acid in percent (Q-39).", "type": "number", "minimum": 0, "maximum": 100 },
         "minutes": { "description": "Boil time (Q-39).", "$ref": "#/$defs/minutes" }
+      },
+      "additionalProperties": false
+    },
+    "other": {
+      "description": "Another boil addition, e.g. Irish moss (Q-42): like a hop without alpha acid.",
+      "type": "object",
+      "required": ["name", "grams"],
+      "properties": {
+        "name": { "$ref": "#/$defs/text" },
+        "grams": { "$ref": "#/$defs/grams" },
+        "minutes": { "description": "Boil time.", "$ref": "#/$defs/minutes" }
       },
       "additionalProperties": false
     },

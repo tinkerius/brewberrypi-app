@@ -1,5 +1,5 @@
 """M1: recipe catalogue, one file per recipe (RCP-001..012, AC-080, AC-081, AC-084, AC-085, AC-094..101,
-AC-118..AC-123, Q-27, Q-29, Q-33, Q-34, Q-37..Q-41)."""
+AC-118..AC-124, Q-27, Q-29, Q-33, Q-34, Q-37..Q-42)."""
 
 import json
 import logging
@@ -754,6 +754,40 @@ def test_AC_123_an_invalid_final_gravity_skips_the_recipe(tmp_path: Path, final:
     directory = tmp_path / "recipes"
     batch = {"plato": 12.6, "final_plato": final}
     recipe_file(directory, {"version": 3, "name": "Bad", "mashing_process": MASH_IN, "batch": batch}, "Bad")
+    recipe_file(directory, {"version": 3, "name": "Good", "mashing_process": MASH_IN, **DESIGN}, "Good")
+    assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Good"]
+
+
+@pytest.mark.parametrize(
+    "others", [[{"name": "Irish Moss", "grams": 10, "minutes": 5}], [{"name": "Coriander", "grams": 15}], []]
+)
+def test_AC_124_other_additions_are_accepted_and_not_used(tmp_path: Path, others: Any) -> None:
+    directory = tmp_path / "recipes"
+    ingredients = {**INGREDIENTS, "others": others}
+    file = recipe_file(
+        directory,
+        {"version": 3, "name": "Brew", "mashing_process": MASH_IN, "ingredients": ingredients},
+        "Brew",
+    )
+    before = (file.read_bytes(), file.stat().st_mtime_ns)
+    assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Brew"]
+    assert (file.read_bytes(), file.stat().st_mtime_ns) == before
+
+
+@pytest.mark.parametrize(
+    "other",
+    [
+        {"name": "Irish Moss", "grams": 10, "alpha": 5},
+        {"grams": 10},
+        {"name": "Irish Moss"},
+        {"name": "Irish Moss", "grams": 10, "minutes": 2.5},
+        {"name": "Irish Moss", "grams": 10, "ebc": 3},
+    ],
+)
+def test_AC_124_an_invalid_other_addition_skips_the_recipe(tmp_path: Path, other: Any) -> None:
+    directory = tmp_path / "recipes"
+    bad = {"version": 3, "name": "Bad", "mashing_process": MASH_IN, "ingredients": {"others": [other]}}
+    recipe_file(directory, bad, "Bad")
     recipe_file(directory, {"version": 3, "name": "Good", "mashing_process": MASH_IN, **DESIGN}, "Good")
     assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Good"]
 
