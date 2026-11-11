@@ -1,5 +1,5 @@
 """M1: recipe catalogue, one file per recipe (RCP-001..012, AC-080, AC-081, AC-084, AC-085, AC-094..101,
-AC-118..AC-126, Q-27, Q-29, Q-33, Q-34, Q-37..Q-44)."""
+AC-118..AC-127, Q-27, Q-29, Q-33, Q-34, Q-37..Q-45)."""
 
 import json
 import logging
@@ -1069,5 +1069,60 @@ def test_AC_126_a_description_that_is_not_text_skips_the_recipe(tmp_path: Path, 
     )
     recipe_file(
         directory, {"version": 3, "name": "Good", "description": "Fine.", "mashing_process": MASH_IN}, "Good"
+    )
+    assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Good"]
+
+
+FERMENTATION = {"yeast": {"name": "WB-06", "grams": 11.5}, "co2": 6.5}
+"""The fermentation (RCP-017): the yeast and the target carbonation."""
+
+
+@pytest.mark.parametrize(
+    "fermentation",
+    [FERMENTATION, {"yeast": {"name": "WB-06"}}, {"yeast": {"name": "WB-06", "grams": 11}}, {"co2": 5}, {}],
+)
+def test_AC_127_the_fermentation_is_accepted_and_not_used(tmp_path: Path, fermentation: Any) -> None:
+    directory = tmp_path / "recipes"
+    file = recipe_file(
+        directory,
+        {"version": 3, "name": "Brew", "mashing_process": MASH_IN, "fermentation": fermentation},
+        "Brew",
+    )
+    recipe_file(directory, {"version": 3, "name": "Brew", "mashing_process": MASH_IN}, "Plain")
+    before = (file.read_bytes(), file.stat().st_mtime_ns)
+    catalogue = {recipe.id: recipe for recipe in load_recipes(configured(directory))}
+    assert (catalogue["Brew"].name, catalogue["Brew"].goals) == (
+        catalogue["Plain"].name,
+        catalogue["Plain"].goals,
+    )
+    assert (file.read_bytes(), file.stat().st_mtime_ns) == before
+
+
+@pytest.mark.parametrize(
+    "fermentation",
+    [
+        [],
+        {"temperature": 18},
+        {"yeast": {"grams": 11.5}},
+        {"yeast": {"name": ""}},
+        {"yeast": {"name": "WB-06", "grams": 0}},
+        {"yeast": {"name": "WB-06", "grams": "11.5"}},
+        {"yeast": {"name": "WB-06", "kind": "dry"}},
+        {"yeast": "WB-06"},
+        {"co2": 0},
+        {"co2": "6.5"},
+    ],
+)
+def test_AC_127_an_invalid_fermentation_skips_the_recipe(tmp_path: Path, fermentation: Any) -> None:
+    directory = tmp_path / "recipes"
+    recipe_file(
+        directory,
+        {"version": 3, "name": "Bad", "mashing_process": MASH_IN, "fermentation": fermentation},
+        "Bad",
+    )
+    recipe_file(
+        directory,
+        {"version": 3, "name": "Good", "mashing_process": MASH_IN, "fermentation": FERMENTATION},
+        "Good",
     )
     assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Good"]

@@ -17,7 +17,8 @@
     "mashing": { "$ref": "#/$defs/mashing" },
     "ingredients": { "$ref": "#/$defs/ingredients" },
     "batch": { "$ref": "#/$defs/batch" },
-    "water": { "$ref": "#/$defs/water" }
+    "water": { "$ref": "#/$defs/water" },
+    "fermentation": { "$ref": "#/$defs/fermentation" }
   },
   "additionalProperties": false,
   "$defs": {
@@ -106,6 +107,28 @@
       }
     },
     "grams": { "description": "Amount in grams.", "type": "integer", "minimum": 1 },
+    "fermentation": {
+      "description": "The fermentation (RCP-017, Q-45): the yeast and the target carbonation. Not used by the application.",
+      "type": "object",
+      "properties": {
+        "yeast": {
+          "description": "The yeast: its name and, optionally, its amount in grams (decimals allowed, e.g. 11.5).",
+          "type": "object",
+          "properties": {
+            "name": { "$ref": "#/$defs/text" },
+            "grams": { "type": "number", "exclusiveMinimum": 0 }
+          },
+          "required": ["name"],
+          "additionalProperties": false
+        },
+        "co2": {
+          "description": "The target carbonation: grams of CO2 per litre of beer.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
     "water": {
       "description": "The brewing-day water in litres (RCP-015, Q-40): mash, sparge and top-up water. Not used by the application.",
       "type": "object",
