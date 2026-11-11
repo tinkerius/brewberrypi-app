@@ -135,7 +135,20 @@
       "properties": {
         "mash": { "$ref": "#/$defs/liters" },
         "sparge": { "$ref": "#/$defs/liters" },
-        "top_up": { "$ref": "#/$defs/liters" }
+        "top_up": { "$ref": "#/$defs/liters" },
+        "treatment": {
+          "description": "The water treatment for the residual alkalinity (RCP-015, Q-46): the tap water and what is done to it. Not used by the application.",
+          "type": "object",
+          "properties": {
+            "alkalinity": { "description": "The tap water's residual alkalinity in °dH.", "type": "number" },
+            "carbonate_hardness": { "description": "The tap water's carbonate hardness in °dH.", "type": "number", "minimum": 0 },
+            "boil": { "description": "Whether the brewing water is boiled.", "type": "boolean" },
+            "gypsum": { "description": "Brewing gypsum in g per 10 L.", "type": "number", "minimum": 0 },
+            "acid_malt": { "description": "Acid malt in % of the grist.", "type": "number", "minimum": 0, "maximum": 100 },
+            "lactic_acid": { "description": "Lactic acid 80 % in ml per 10 L.", "type": "number", "minimum": 0 }
+          },
+          "additionalProperties": false
+        }
       },
       "additionalProperties": false
     },

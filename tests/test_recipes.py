@@ -1,5 +1,5 @@
 """M1: recipe catalogue, one file per recipe (RCP-001..012, AC-080, AC-081, AC-084, AC-085, AC-094..101,
-AC-118..AC-127, Q-27, Q-29, Q-33, Q-34, Q-37..Q-45)."""
+AC-118..AC-128, Q-27, Q-29, Q-33, Q-34, Q-37..Q-46)."""
 
 import json
 import logging
@@ -1125,4 +1125,57 @@ def test_AC_127_an_invalid_fermentation_skips_the_recipe(tmp_path: Path, ferment
         {"version": 3, "name": "Good", "mashing_process": MASH_IN, "fermentation": FERMENTATION},
         "Good",
     )
+    assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Good"]
+
+
+TREATMENT = {
+    "alkalinity": 10.3,
+    "carbonate_hardness": 14,
+    "boil": True,
+    "gypsum": 1.5,
+    "acid_malt": 1,
+    "lactic_acid": 0.5,
+}
+"""The water treatment (RCP-015, Q-46)."""
+
+
+@pytest.mark.parametrize(
+    "treatment", [TREATMENT, {"alkalinity": -2.5}, {"boil": False}, {"acid_malt": 100}, {"gypsum": 0}, {}]
+)
+def test_AC_128_the_water_treatment_is_accepted_and_not_used(tmp_path: Path, treatment: Any) -> None:
+    directory = tmp_path / "recipes"
+    water = {"mash": 16, "treatment": treatment}
+    file = recipe_file(
+        directory, {"version": 3, "name": "Brew", "mashing_process": MASH_IN, "water": water}, "Brew"
+    )
+    recipe_file(directory, {"version": 3, "name": "Brew", "mashing_process": MASH_IN}, "Plain")
+    before = (file.read_bytes(), file.stat().st_mtime_ns)
+    catalogue = {recipe.id: recipe for recipe in load_recipes(configured(directory))}
+    assert (catalogue["Brew"].name, catalogue["Brew"].goals) == (
+        catalogue["Plain"].name,
+        catalogue["Plain"].goals,
+    )
+    assert (file.read_bytes(), file.stat().st_mtime_ns) == before
+
+
+@pytest.mark.parametrize(
+    "treatment",
+    [
+        [],
+        {"hardness": 14},
+        {"alkalinity": "10.3"},
+        {"carbonate_hardness": -1},
+        {"gypsum": -0.5},
+        {"lactic_acid": -1},
+        {"acid_malt": 101},
+        {"boil": "yes"},
+        {"boil": 1},
+    ],
+)
+def test_AC_128_an_invalid_water_treatment_skips_the_recipe(tmp_path: Path, treatment: Any) -> None:
+    directory = tmp_path / "recipes"
+    bad = {"version": 3, "name": "Bad", "mashing_process": MASH_IN, "water": {"treatment": treatment}}
+    recipe_file(directory, bad, "Bad")
+    good = {"version": 3, "name": "Good", "mashing_process": MASH_IN, "water": {"treatment": TREATMENT}}
+    recipe_file(directory, good, "Good")
     assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Good"]

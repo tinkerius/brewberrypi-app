@@ -154,7 +154,8 @@ Overview tab), the mashing plan, `mashing` (the rests planned for the mash, each
 `malts`, `hops` and `others`; a malt with `name`, `grams` and `ebc`, a hop with `name`, `alpha` and its
 `additions` of `minutes` and `grams`, another boil addition likewise without `alpha`) and
 its `batch` (`liters`, the knockout volume, `plato` and `final_plato`, the original and final gravity), written by the recipe editor's Malt and Hops tabs,
-its `water` (`mash`, `sparge` and `top_up` in litres, the Water tab) and its `fermentation` (the `yeast` with
+its `water` (`mash`, `sparge` and `top_up` in litres, and the `treatment` for the residual alkalinity, the
+Water tab) and its `fermentation` (the `yeast` with
 `name` and `grams`, and `co2`, the target carbonation in g/L, the Fermentation tab). The application checks
 them but does not use them: the goals alone are brewed.
 

@@ -88,7 +88,12 @@
 
 - `RCP-015` `[NEW]` (`Q-40`) The optional section `water` holds the brewing-day water volumes in litres: an object
   with the optional `mash` (mash water), `sparge` (sparge water, for rinsing the grain while lautering) and `top_up`
-  (top-up water, added after lautering to reach the original gravity), each a number ≥ 0, no other key. It is
+  (top-up water, added after lautering to reach the original gravity), each a number ≥ 0, and the optional
+  `treatment` (`Q-46`), the water treatment for the residual alkalinity: an object with the optional `alkalinity`
+  (the tap water's residual alkalinity in °dH, a number), `carbonate_hardness` (the tap water's carbonate hardness in
+  °dH, a number ≥ 0), `boil` (whether the brewing water is boiled, a boolean), `gypsum` (brewing gypsum in g per
+  10 L, a number ≥ 0), `acid_malt` (acid malt in % of the grist, a number from 0 to 100) and `lactic_acid` (lactic
+  acid 80 % in ml per 10 L, a number ≥ 0), no other key; no other key in `water`. It is
   design information: the application checks it with the schema but does not use it, and a migration keeps it.
 - `RCP-016` `[NEW]` (`Q-44`) The optional `description` is the brewer's free text about the recipe: a string, which
   may span several lines (`\n`) and may be empty. It is design information: the application checks it with the
@@ -143,7 +148,7 @@
 |---|---|---|---|
 | 1 | 2026-11-06 (`Q-31`, `Q-33`) | `name` and `mashing_process` with `goals`; `version` introduced | – (first version; a file without `version` is in version 1) |
 | 2 | 2026-11-06 (`Q-34`) | `mashing_process.goals` may be empty | `1 → 2`: no change but `version` (every version-1 recipe is valid in version 2) |
-| 3 | 2026-11-10 (`Q-37`..`Q-45`) | optional `description` (`RCP-016`), mashing plan `mashing` (`RCP-012`), `ingredients` (`RCP-013`), `batch` (`RCP-014`), `water` (`RCP-015`) and `fermentation` (`RCP-017`) | `2 → 3`: no change but `version` (every version-2 recipe is valid in version 3) |
+| 3 | 2026-11-10 (`Q-37`..`Q-46`) | optional `description` (`RCP-016`), mashing plan `mashing` (`RCP-012`), `ingredients` (`RCP-013`), `batch` (`RCP-014`), `water` with its `treatment` (`RCP-015`) and `fermentation` (`RCP-017`) | `2 → 3`: no change but `version` (every version-2 recipe is valid in version 3) |
 
 ## 7.3 Goal definition format
 
