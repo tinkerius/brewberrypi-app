@@ -1,5 +1,5 @@
-"""M1: recipe catalogue, one file per recipe (RCP-001..011, AC-080, AC-081, AC-084, AC-085, AC-094..101,
-Q-27, Q-29, Q-33, Q-34)."""
+"""M1: recipe catalogue, one file per recipe (RCP-001..012, AC-080, AC-081, AC-084, AC-085, AC-094..101,
+AC-118..AC-128, Q-27, Q-29, Q-33, Q-34, Q-37..Q-47)."""
 
 import json
 import logging
@@ -477,7 +477,9 @@ def test_AC_095_a_file_in_the_latest_version_is_not_written(tmp_path: Path) -> N
 
 
 @pytest.mark.parametrize("with_version_1", [True, False])
-def test_AC_101_a_version_1_file_is_written_back_as_version_2(tmp_path: Path, with_version_1: bool) -> None:
+def test_AC_101_a_version_1_file_is_written_back_in_the_latest_version(
+    tmp_path: Path, with_version_1: bool
+) -> None:
     directory = tmp_path / "recipes"
     original = {
         "$schema": "../recipe.schema.json",
@@ -491,27 +493,362 @@ def test_AC_101_a_version_1_file_is_written_back_as_version_2(tmp_path: Path, wi
     assert (recipe.name, [goal.type for goal in recipe.goals]) == ("Old", ["HeatUp", "MashIn"])
     written = json.loads(file.read_text())
     assert list(written)[:2] == ["$schema", "version"]
-    assert written == {**original, "version": 2}
+    assert written == {**original, "version": 3}
     assert (directory / BACKUP_DIRECTORY / "Old.v1.json").read_text() == original_text
+
+
+def test_AC_118_a_version_2_file_is_written_back_as_version_3(tmp_path: Path) -> None:
+    directory = tmp_path / "recipes"
+    original = {
+        "$schema": "../recipe.schema.json",
+        "version": 2,
+        "name": "Old",
+        "mashing_process": {"goals": [{"type": "HeatUp", "temperature": 62}, {"type": "MashIn"}]},
+    }
+    file = recipe_file(directory, original, "Old")
+    original_text = file.read_text()
+    [recipe] = load_recipes(configured(directory))
+    assert (recipe.name, [goal.type for goal in recipe.goals]) == ("Old", ["HeatUp", "MashIn"])
+    written = json.loads(file.read_text())
+    assert list(written)[:2] == ["$schema", "version"]
+    assert written == {**original, "version": 3}
+    assert (directory / BACKUP_DIRECTORY / "Old.v2.json").read_text() == original_text
+
+
+MASHING = {"MaltoseRest": {"temperature": 63, "minutes": 45}, "MashOut": {"temperature": 78, "minutes": 10}}
+"""A valid mashing plan (RCP-012)."""
+
+
+def test_AC_119_a_valid_mashing_plan_is_accepted_and_not_used(tmp_path: Path) -> None:
+    directory = tmp_path / "recipes"
+    goals = {"goals": [{"type": "HeatUp", "temperature": 62}, {"type": "MashIn"}]}
+    file = recipe_file(
+        directory, {"version": 3, "name": "Plan", "mashing_process": goals, "mashing": MASHING}, "Plan"
+    )
+    recipe_file(directory, {"version": 3, "name": "Plan", "mashing_process": goals}, "NoPlan")
+    before = (file.read_bytes(), file.stat().st_mtime_ns)
+    catalogue = {recipe.id: recipe for recipe in load_recipes(configured(directory))}
+    assert (catalogue["Plan"].name, catalogue["Plan"].goals) == (
+        catalogue["NoPlan"].name,
+        catalogue["NoPlan"].goals,
+    )
+    assert (file.read_bytes(), file.stat().st_mtime_ns) == before
+    assert not (directory / BACKUP_DIRECTORY).exists()
+
+
+@pytest.mark.parametrize(
+    "mashing",
+    [
+        [],
+        "MaltoseRest",
+        {"MainRest": {"temperature": 63, "minutes": 45}},
+        {"MaltoseRest": {"minutes": 45}},
+        {"MaltoseRest": {"temperature": 63}},
+        {"MaltoseRest": {"temperature": 111, "minutes": 45}},
+        {"MaltoseRest": {"temperature": "63", "minutes": 45}},
+        {"MaltoseRest": {"temperature": 63, "minutes": 4.5}},
+        {"MaltoseRest": {"temperature": 63, "minutes": -1}},
+        {"MaltoseRest": {"temperature": 63, "minutes": 45, "name": "Maltoserast"}},
+    ],
+)
+def test_AC_119_an_invalid_mashing_plan_skips_the_recipe(tmp_path: Path, mashing: Any) -> None:
+    directory = tmp_path / "recipes"
+    recipe_file(
+        directory, {"version": 3, "name": "Bad", "mashing_process": MASH_IN, "mashing": mashing}, "Bad"
+    )
+    recipe_file(
+        directory, {"version": 3, "name": "Good", "mashing_process": MASH_IN, "mashing": MASHING}, "Good"
+    )
+    assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Good"]
+
+
+INGREDIENTS = {
+    "malts": [{"name": "Pilsner malt", "grams": 4500}, {"name": "Munich malt", "grams": 500}],
+    "hops": [{"name": "Hallertauer Tradition", "additions": [{"grams": 30}]}],
+}
+"""Valid ingredients (RCP-013)."""
+
+
+@pytest.mark.parametrize(
+    "ingredients",
+    [INGREDIENTS, {**INGREDIENTS, "hops": []}, {"malts": INGREDIENTS["malts"]}, {}],
+)
+def test_AC_120_valid_ingredients_are_accepted_and_not_used(tmp_path: Path, ingredients: Any) -> None:
+    directory = tmp_path / "recipes"
+    goals = {"goals": [{"type": "HeatUp", "temperature": 62}, {"type": "MashIn"}]}
+    file = recipe_file(
+        directory,
+        {
+            "version": 3,
+            "name": "Brew",
+            "mashing_process": goals,
+            "mashing": MASHING,
+            "ingredients": ingredients,
+        },
+        "Brew",
+    )
+    recipe_file(directory, {"version": 3, "name": "Brew", "mashing_process": goals}, "Plain")
+    before = (file.read_bytes(), file.stat().st_mtime_ns)
+    catalogue = {recipe.id: recipe for recipe in load_recipes(configured(directory))}
+    assert (catalogue["Brew"].name, catalogue["Brew"].goals) == (
+        catalogue["Plain"].name,
+        catalogue["Plain"].goals,
+    )
+    assert (file.read_bytes(), file.stat().st_mtime_ns) == before
+
+
+@pytest.mark.parametrize(
+    "ingredients",
+    [
+        [],
+        {"grains": []},
+        {"malts": {"name": "Pilsner malt", "grams": 4500}},
+        {"malts": [{"grams": 4500}]},
+        {"malts": [{"name": "Pilsner malt"}]},
+        {"malts": [{"name": "", "grams": 4500}]},
+        {"hops": [{"name": "Saaz", "additions": [{"grams": 0}]}]},
+        {"hops": [{"name": "Saaz", "additions": [{"grams": 12.5}]}]},
+        {"hops": [{"name": "Saaz", "additions": [{"grams": "30"}]}]},
+        {"hops": [{"name": "Saaz", "additions": [{"grams": 30}], "percent": 100}]},
+    ],
+)
+def test_AC_120_invalid_ingredients_skip_the_recipe(tmp_path: Path, ingredients: Any) -> None:
+    directory = tmp_path / "recipes"
+    recipe_file(
+        directory,
+        {"version": 3, "name": "Bad", "mashing_process": MASH_IN, "ingredients": ingredients},
+        "Bad",
+    )
+    recipe_file(
+        directory,
+        {"version": 3, "name": "Good", "mashing_process": MASH_IN, "ingredients": INGREDIENTS},
+        "Good",
+    )
+    assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Good"]
+
+
+DESIGN = {
+    "ingredients": {
+        "malts": [
+            {"name": "Pilsner malt", "grams": 4500, "ebc": 3.5},
+            {"name": "Rice", "grams": 500, "ebc": 0},
+        ],
+        "hops": [
+            {"name": "Magnum", "alpha": 5.5, "additions": [{"minutes": 60, "grams": 20}]},
+            {"name": "Dry", "alpha": 0, "additions": [{"minutes": 0, "grams": 10}]},
+            {"name": "Pure", "alpha": 100, "additions": [{"grams": 1}]},
+        ],
+    },
+    "batch": {"liters": 20, "plato": 12.6},
+}
+"""Ingredients with colour, alpha acid and boil time, and a batch (RCP-013, RCP-014)."""
+
+
+@pytest.mark.parametrize(
+    "design",
+    [
+        DESIGN,
+        {**DESIGN, "batch": {"liters": 20}},
+        {**DESIGN, "batch": {"plato": 12.6}},
+        {**DESIGN, "batch": {}},
+    ],
+)
+def test_AC_121_colour_bitterness_and_batch_are_accepted_and_not_used(tmp_path: Path, design: Any) -> None:
+    directory = tmp_path / "recipes"
+    file = recipe_file(
+        directory, {"version": 3, "name": "Brew", "mashing_process": MASH_IN, **design}, "Brew"
+    )
+    recipe_file(directory, {"version": 3, "name": "Brew", "mashing_process": MASH_IN}, "Plain")
+    before = (file.read_bytes(), file.stat().st_mtime_ns)
+    catalogue = {recipe.id: recipe for recipe in load_recipes(configured(directory))}
+    assert (catalogue["Brew"].name, catalogue["Brew"].goals) == (
+        catalogue["Plain"].name,
+        catalogue["Plain"].goals,
+    )
+    assert (file.read_bytes(), file.stat().st_mtime_ns) == before
+
+
+def _malt(**fields: Any) -> dict[str, Any]:
+    return {"ingredients": {"malts": [{"name": "M", "grams": 1, **fields}]}}
+
+
+def _hop(addition: dict[str, Any] | None = None, **fields: Any) -> dict[str, Any]:
+    return {
+        "ingredients": {"hops": [{"name": "H", "additions": [{"grams": 1, **(addition or {})}], **fields}]}
+    }
+
+
+@pytest.mark.parametrize(
+    "design",
+    [
+        _malt(ebc=-1),
+        _malt(ebc="3"),
+        _malt(alpha=5),
+        _hop(alpha=-0.1),
+        _hop(alpha=100.5),
+        _hop(alpha="5"),
+        _hop({"minutes": 1.5}),
+        _hop({"minutes": -1}),
+        _hop(ebc=3),
+        {"batch": []},
+        {"batch": {"gallons": 5}},
+        {"batch": {"liters": 0}},
+        {"batch": {"liters": -20}},
+        {"batch": {"plato": -1}},
+        {"batch": {"plato": 40.5}},
+    ],
+)
+def test_AC_121_invalid_colour_bitterness_or_batch_skip_the_recipe(tmp_path: Path, design: Any) -> None:
+    directory = tmp_path / "recipes"
+    recipe_file(directory, {"version": 3, "name": "Bad", "mashing_process": MASH_IN, **design}, "Bad")
+    recipe_file(directory, {"version": 3, "name": "Good", "mashing_process": MASH_IN, **DESIGN}, "Good")
+    assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Good"]
+
+
+WATER = {"mash": 16, "sparge": 14, "top_up": 2}
+"""The brewing-day water (RCP-015)."""
+
+
+@pytest.mark.parametrize("water", [WATER, {"mash": 16}, {"sparge": 14.5}, {"top_up": 0}, {}])
+def test_AC_122_the_water_is_accepted_and_not_used(tmp_path: Path, water: Any) -> None:
+    directory = tmp_path / "recipes"
+    file = recipe_file(
+        directory, {"version": 3, "name": "Brew", "mashing_process": MASH_IN, "water": water}, "Brew"
+    )
+    recipe_file(directory, {"version": 3, "name": "Brew", "mashing_process": MASH_IN}, "Plain")
+    before = (file.read_bytes(), file.stat().st_mtime_ns)
+    catalogue = {recipe.id: recipe for recipe in load_recipes(configured(directory))}
+    assert (catalogue["Brew"].name, catalogue["Brew"].goals) == (
+        catalogue["Plain"].name,
+        catalogue["Plain"].goals,
+    )
+    assert (file.read_bytes(), file.stat().st_mtime_ns) == before
+
+
+@pytest.mark.parametrize("water", [[], 16, {"strike": 16}, {"mash": -1}, {"sparge": "14"}, {"top_up": None}])
+def test_AC_122_invalid_water_skips_the_recipe(tmp_path: Path, water: Any) -> None:
+    directory = tmp_path / "recipes"
+    recipe_file(directory, {"version": 3, "name": "Bad", "mashing_process": MASH_IN, "water": water}, "Bad")
+    recipe_file(directory, {"version": 3, "name": "Good", "mashing_process": MASH_IN, "water": WATER}, "Good")
+    assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Good"]
+
+
+@pytest.mark.parametrize(
+    "batch",
+    [
+        {"final_plato": 2.5},
+        {"plato": 12.6, "final_plato": 0},
+        {"liters": 20, "plato": 12.6, "final_plato": 40},
+    ],
+)
+def test_AC_123_the_final_gravity_is_accepted_and_not_used(tmp_path: Path, batch: Any) -> None:
+    directory = tmp_path / "recipes"
+    file = recipe_file(
+        directory, {"version": 3, "name": "Brew", "mashing_process": MASH_IN, "batch": batch}, "Brew"
+    )
+    before = (file.read_bytes(), file.stat().st_mtime_ns)
+    assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Brew"]
+    assert (file.read_bytes(), file.stat().st_mtime_ns) == before
+
+
+@pytest.mark.parametrize("final", [-0.1, 40.5, "2.5", None])
+def test_AC_123_an_invalid_final_gravity_skips_the_recipe(tmp_path: Path, final: Any) -> None:
+    directory = tmp_path / "recipes"
+    batch = {"plato": 12.6, "final_plato": final}
+    recipe_file(directory, {"version": 3, "name": "Bad", "mashing_process": MASH_IN, "batch": batch}, "Bad")
+    recipe_file(directory, {"version": 3, "name": "Good", "mashing_process": MASH_IN, **DESIGN}, "Good")
+    assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Good"]
+
+
+@pytest.mark.parametrize(
+    "others",
+    [
+        [{"name": "Irish Moss", "additions": [{"minutes": 5, "grams": 10}]}],
+        [{"name": "Coriander", "additions": [{"grams": 15}]}],
+        [],
+    ],
+)
+def test_AC_124_other_additions_are_accepted_and_not_used(tmp_path: Path, others: Any) -> None:
+    directory = tmp_path / "recipes"
+    ingredients = {**INGREDIENTS, "others": others}
+    file = recipe_file(
+        directory,
+        {"version": 3, "name": "Brew", "mashing_process": MASH_IN, "ingredients": ingredients},
+        "Brew",
+    )
+    before = (file.read_bytes(), file.stat().st_mtime_ns)
+    assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Brew"]
+    assert (file.read_bytes(), file.stat().st_mtime_ns) == before
+
+
+@pytest.mark.parametrize(
+    "other",
+    [
+        {"name": "Irish Moss", "alpha": 5, "additions": [{"grams": 10}]},
+        {"additions": [{"grams": 10}]},
+        {"name": "Irish Moss", "additions": [{"minutes": 5}]},
+        {"name": "Irish Moss", "additions": [{"grams": 10, "minutes": 2.5}]},
+        {"name": "Irish Moss", "ebc": 3, "additions": [{"grams": 10}]},
+    ],
+)
+def test_AC_124_an_invalid_other_addition_skips_the_recipe(tmp_path: Path, other: Any) -> None:
+    directory = tmp_path / "recipes"
+    bad = {"version": 3, "name": "Bad", "mashing_process": MASH_IN, "ingredients": {"others": [other]}}
+    recipe_file(directory, bad, "Bad")
+    recipe_file(directory, {"version": 3, "name": "Good", "mashing_process": MASH_IN, **DESIGN}, "Good")
+    assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Good"]
+
+
+def test_AC_125_a_hop_with_several_additions_is_accepted_and_not_used(tmp_path: Path) -> None:
+    directory = tmp_path / "recipes"
+    hop = {"name": "Hallertauer", "alpha": 12, "additions": [{"minutes": 60, "grams": 20}, {"grams": 10}]}
+    content = {"version": 3, "name": "Brew", "mashing_process": MASH_IN, "ingredients": {"hops": [hop]}}
+    file = recipe_file(directory, content, "Brew")
+    before = (file.read_bytes(), file.stat().st_mtime_ns)
+    assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Brew"]
+    assert (file.read_bytes(), file.stat().st_mtime_ns) == before
+
+
+@pytest.mark.parametrize(
+    "hop",
+    [
+        {"name": "H"},
+        {"name": "H", "additions": []},
+        {"name": "H", "additions": [{"minutes": 60}]},
+        {"name": "H", "additions": [{"grams": 0}]},
+        {"name": "H", "additions": [{"grams": 10, "alpha": 5}]},
+        {"name": "H", "grams": 10, "additions": [{"grams": 10}]},
+        {"name": "H", "minutes": 60, "additions": [{"grams": 10}]},
+        {"name": "H", "additions": {"grams": 10}},
+    ],
+)
+def test_AC_125_a_hop_without_valid_additions_skips_the_recipe(tmp_path: Path, hop: Any) -> None:
+    directory = tmp_path / "recipes"
+    bad = {"version": 3, "name": "Bad", "mashing_process": MASH_IN, "ingredients": {"hops": [hop]}}
+    recipe_file(directory, bad, "Bad")
+    recipe_file(directory, {"version": 3, "name": "Good", "mashing_process": MASH_IN, **DESIGN}, "Good")
+    assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Good"]
 
 
 def test_AC_100_a_recipe_without_goals_is_listed(tmp_path: Path) -> None:
     directory = tmp_path / "recipes"
-    recipe_file(directory, {"version": 2, "name": "Draft", "mashing_process": {"goals": []}}, "Draft")
-    recipe_file(directory, {"version": 2, "name": "No section"}, "NoSection")
+    recipe_file(
+        directory, {"version": LATEST_VERSION, "name": "Draft", "mashing_process": {"goals": []}}, "Draft"
+    )
+    recipe_file(directory, {"version": LATEST_VERSION, "name": "No section"}, "NoSection")
     write_recipe(directory, [], recipe_id="OldEmpty")  # version 1 needs a goal: skipped before migrating
     catalogue = load_recipes(configured(directory))
     assert [(recipe.id, recipe.goals) for recipe in catalogue] == [("Draft", ())]
 
 
 def test_RCP_008_the_shipped_recipes_are_in_the_latest_version() -> None:
-    assert LATEST_VERSION == 2
+    assert LATEST_VERSION == 3
     for file in (SPEC_DATA / "recipes").iterdir():
         assert json.loads(file.read_text())["version"] == LATEST_VERSION
     for file in TEST_RECIPES.glob("*.json"):  # else the tests would migrate these files in place
         assert json.loads(file.read_text())["version"] == LATEST_VERSION
     assert (
-        read_recipe("R", json.dumps({"version": 2, "name": "x", "mashing_process": MASH_IN}), "R").migrated
+        read_recipe("R", json.dumps({"version": 3, "name": "x", "mashing_process": MASH_IN}), "R").migrated
         is None
     )
 
@@ -702,3 +1039,154 @@ def test_with_version_puts_version_after_schema() -> None:
         "name",
     ]
     assert list(with_version({"name": "x"}, 2)) == ["version", "name"]
+
+
+@pytest.mark.parametrize("description", ["A wheat beer.", "Line one.\nLine two.\n\nLine four.", ""])
+def test_AC_126_the_description_is_accepted_and_not_used(tmp_path: Path, description: str) -> None:
+    directory = tmp_path / "recipes"
+    file = recipe_file(
+        directory,
+        {"version": 3, "name": "Brew", "description": description, "mashing_process": MASH_IN},
+        "Brew",
+    )
+    recipe_file(directory, {"version": 3, "name": "Brew", "mashing_process": MASH_IN}, "Plain")
+    before = (file.read_bytes(), file.stat().st_mtime_ns)
+    catalogue = {recipe.id: recipe for recipe in load_recipes(configured(directory))}
+    assert (catalogue["Brew"].name, catalogue["Brew"].goals) == (
+        catalogue["Plain"].name,
+        catalogue["Plain"].goals,
+    )
+    assert (file.read_bytes(), file.stat().st_mtime_ns) == before
+
+
+@pytest.mark.parametrize("description", [None, 1, ["A wheat beer."], {"text": "A wheat beer."}])
+def test_AC_126_a_description_that_is_not_text_skips_the_recipe(tmp_path: Path, description: Any) -> None:
+    directory = tmp_path / "recipes"
+    recipe_file(
+        directory,
+        {"version": 3, "name": "Bad", "description": description, "mashing_process": MASH_IN},
+        "Bad",
+    )
+    recipe_file(
+        directory, {"version": 3, "name": "Good", "description": "Fine.", "mashing_process": MASH_IN}, "Good"
+    )
+    assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Good"]
+
+
+FERMENTATION = {"yeast": {"name": "WB-06", "grams": 11.5}, "co2": 6.5}
+"""The fermentation (RCP-017): the yeast and the target carbonation."""
+
+
+@pytest.mark.parametrize(
+    "fermentation",
+    [FERMENTATION, {"yeast": {"name": "WB-06"}}, {"yeast": {"name": "WB-06", "grams": 11}}, {"co2": 5}, {}],
+)
+def test_AC_127_the_fermentation_is_accepted_and_not_used(tmp_path: Path, fermentation: Any) -> None:
+    directory = tmp_path / "recipes"
+    file = recipe_file(
+        directory,
+        {"version": 3, "name": "Brew", "mashing_process": MASH_IN, "fermentation": fermentation},
+        "Brew",
+    )
+    recipe_file(directory, {"version": 3, "name": "Brew", "mashing_process": MASH_IN}, "Plain")
+    before = (file.read_bytes(), file.stat().st_mtime_ns)
+    catalogue = {recipe.id: recipe for recipe in load_recipes(configured(directory))}
+    assert (catalogue["Brew"].name, catalogue["Brew"].goals) == (
+        catalogue["Plain"].name,
+        catalogue["Plain"].goals,
+    )
+    assert (file.read_bytes(), file.stat().st_mtime_ns) == before
+
+
+@pytest.mark.parametrize(
+    "fermentation",
+    [
+        [],
+        {"temperature": 18},
+        {"yeast": {"grams": 11.5}},
+        {"yeast": {"name": ""}},
+        {"yeast": {"name": "WB-06", "grams": 0}},
+        {"yeast": {"name": "WB-06", "grams": "11.5"}},
+        {"yeast": {"name": "WB-06", "kind": "dry"}},
+        {"yeast": "WB-06"},
+        {"co2": 0},
+        {"co2": "6.5"},
+    ],
+)
+def test_AC_127_an_invalid_fermentation_skips_the_recipe(tmp_path: Path, fermentation: Any) -> None:
+    directory = tmp_path / "recipes"
+    recipe_file(
+        directory,
+        {"version": 3, "name": "Bad", "mashing_process": MASH_IN, "fermentation": fermentation},
+        "Bad",
+    )
+    recipe_file(
+        directory,
+        {"version": 3, "name": "Good", "mashing_process": MASH_IN, "fermentation": FERMENTATION},
+        "Good",
+    )
+    assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Good"]
+
+
+TREATMENT = {
+    "alkalinity": 10.3,
+    "carbonate_hardness": 14,
+    "boil": True,
+    "gypsum": 1.5,
+    "acid_malt": 1,
+    "lactic_acid": 0.5,
+}
+"""The water treatment (RCP-015, Q-46)."""
+
+
+@pytest.mark.parametrize(
+    "treatment",
+    [
+        TREATMENT,
+        {"alkalinity": -2.5},
+        {"boil": False},
+        {"boil": True, "carbonate_hardness": 2},
+        {"acid_malt": 100},
+        {"gypsum": 0},
+        {},
+    ],
+)
+def test_AC_128_the_water_treatment_is_accepted_and_not_used(tmp_path: Path, treatment: Any) -> None:
+    directory = tmp_path / "recipes"
+    water = {"mash": 16, "treatment": treatment}
+    file = recipe_file(
+        directory, {"version": 3, "name": "Brew", "mashing_process": MASH_IN, "water": water}, "Brew"
+    )
+    recipe_file(directory, {"version": 3, "name": "Brew", "mashing_process": MASH_IN}, "Plain")
+    before = (file.read_bytes(), file.stat().st_mtime_ns)
+    catalogue = {recipe.id: recipe for recipe in load_recipes(configured(directory))}
+    assert (catalogue["Brew"].name, catalogue["Brew"].goals) == (
+        catalogue["Plain"].name,
+        catalogue["Plain"].goals,
+    )
+    assert (file.read_bytes(), file.stat().st_mtime_ns) == before
+
+
+@pytest.mark.parametrize(
+    "treatment",
+    [
+        [],
+        {"hardness": 14},
+        {"alkalinity": "10.3"},
+        {"carbonate_hardness": -1},
+        {"gypsum": -0.5},
+        {"lactic_acid": -1},
+        {"acid_malt": 101},
+        {"boil": "yes"},
+        {"boil": 1},
+        {"boil": True},
+        {"boil": True, "alkalinity": 10.3},
+    ],
+)
+def test_AC_128_an_invalid_water_treatment_skips_the_recipe(tmp_path: Path, treatment: Any) -> None:
+    directory = tmp_path / "recipes"
+    bad = {"version": 3, "name": "Bad", "mashing_process": MASH_IN, "water": {"treatment": treatment}}
+    recipe_file(directory, bad, "Bad")
+    good = {"version": 3, "name": "Good", "mashing_process": MASH_IN, "water": {"treatment": TREATMENT}}
+    recipe_file(directory, good, "Good")
+    assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Good"]

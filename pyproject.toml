@@ -1,6 +1,6 @@
 [project]
 name = "brewberrypi"
-version = "0.1.0-alpha.16"
+version = "0.1.0-alpha.17"
 description = "Raspberry Pi controller for a home-brewing mash kettle"
 readme = "README.md"
 requires-python = ">=3.11"

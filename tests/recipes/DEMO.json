@@ -1,6 +1,6 @@
 {
   "$schema": "../../docs/specification/data/recipe.schema.json",
-  "version": 2,
+  "version": 3,
   "name": "Demo Process",
   "mashing_process": {
     "goals": [
