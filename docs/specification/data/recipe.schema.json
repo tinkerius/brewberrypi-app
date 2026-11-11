@@ -90,11 +90,12 @@
     },
     "liters": { "type": "number", "minimum": 0 },
     "batch": {
-      "description": "The batch (RCP-014, Q-39): knockout volume (wort at the end of the boil) and original gravity. Not used by the application.",
+      "description": "The batch (RCP-014, Q-39, Q-41): knockout volume (wort at the end of the boil), original and final gravity. Not used by the application.",
       "type": "object",
       "properties": {
         "liters": { "type": "number", "exclusiveMinimum": 0 },
-        "plato": { "type": "number", "minimum": 0, "maximum": 40 }
+        "plato": { "description": "Target original gravity (°P).", "type": "number", "minimum": 0, "maximum": 40 },
+        "final_plato": { "description": "Final gravity (°P, Q-41).", "type": "number", "minimum": 0, "maximum": 40 }
       },
       "additionalProperties": false
     },

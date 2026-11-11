@@ -1,5 +1,5 @@
 """M1: recipe catalogue, one file per recipe (RCP-001..012, AC-080, AC-081, AC-084, AC-085, AC-094..101,
-AC-118..AC-122, Q-27, Q-29, Q-33, Q-34, Q-37..Q-40)."""
+AC-118..AC-123, Q-27, Q-29, Q-33, Q-34, Q-37..Q-41)."""
 
 import json
 import logging
@@ -728,6 +728,33 @@ def test_AC_122_invalid_water_skips_the_recipe(tmp_path: Path, water: Any) -> No
     directory = tmp_path / "recipes"
     recipe_file(directory, {"version": 3, "name": "Bad", "mashing_process": MASH_IN, "water": water}, "Bad")
     recipe_file(directory, {"version": 3, "name": "Good", "mashing_process": MASH_IN, "water": WATER}, "Good")
+    assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Good"]
+
+
+@pytest.mark.parametrize(
+    "batch",
+    [
+        {"final_plato": 2.5},
+        {"plato": 12.6, "final_plato": 0},
+        {"liters": 20, "plato": 12.6, "final_plato": 40},
+    ],
+)
+def test_AC_123_the_final_gravity_is_accepted_and_not_used(tmp_path: Path, batch: Any) -> None:
+    directory = tmp_path / "recipes"
+    file = recipe_file(
+        directory, {"version": 3, "name": "Brew", "mashing_process": MASH_IN, "batch": batch}, "Brew"
+    )
+    before = (file.read_bytes(), file.stat().st_mtime_ns)
+    assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Brew"]
+    assert (file.read_bytes(), file.stat().st_mtime_ns) == before
+
+
+@pytest.mark.parametrize("final", [-0.1, 40.5, "2.5", None])
+def test_AC_123_an_invalid_final_gravity_skips_the_recipe(tmp_path: Path, final: Any) -> None:
+    directory = tmp_path / "recipes"
+    batch = {"plato": 12.6, "final_plato": final}
+    recipe_file(directory, {"version": 3, "name": "Bad", "mashing_process": MASH_IN, "batch": batch}, "Bad")
+    recipe_file(directory, {"version": 3, "name": "Good", "mashing_process": MASH_IN, **DESIGN}, "Good")
     assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Good"]
 
 

@@ -71,12 +71,13 @@
 ```
 
 - `RCP-014` `[NEW]` (`Q-39`) The optional section `batch` describes the brew the recipe is for: an object with the
-  optional `liters` (the knockout volume: the wort at the end of the boil, a number > 0) and `plato` (the original gravity in °Plato, a
-  number from 0 to 40), no other key. The recipe editor uses them for the beer colour and the bitterness. It is
+  optional `liters` (the knockout volume: the wort at the end of the boil, a number > 0), `plato` (the target
+  original gravity in °Plato, a number from 0 to 40) and `final_plato` (the final gravity in °Plato, a number from 0
+  to 40; `Q-41`), no other key. The recipe editor uses them for the beer colour, the bitterness and the alcohol. It is
   design information: the application checks it with the schema but does not use it, and a migration keeps it.
 
 ```json
-"batch": { "liters": 20, "plato": 12.6 }
+"batch": { "liters": 20, "plato": 12.6, "final_plato": 2.5 }
 ```
 
 - `RCP-015` `[NEW]` (`Q-40`) The optional section `water` holds the brewing-day water volumes in litres: an object
@@ -128,7 +129,7 @@
 |---|---|---|---|
 | 1 | 2026-11-06 (`Q-31`, `Q-33`) | `name` and `mashing_process` with `goals`; `version` introduced | – (first version; a file without `version` is in version 1) |
 | 2 | 2026-11-06 (`Q-34`) | `mashing_process.goals` may be empty | `1 → 2`: no change but `version` (every version-1 recipe is valid in version 2) |
-| 3 | 2026-11-10 (`Q-37`, `Q-38`, `Q-39`, `Q-40`) | optional mashing plan `mashing` (`RCP-012`), `ingredients` (`RCP-013`), `batch` (`RCP-014`) and `water` (`RCP-015`) | `2 → 3`: no change but `version` (every version-2 recipe is valid in version 3) |
+| 3 | 2026-11-10 (`Q-37`, `Q-38`, `Q-39`, `Q-40`, `Q-41`) | optional mashing plan `mashing` (`RCP-012`), `ingredients` (`RCP-013`), `batch` (`RCP-014`) and `water` (`RCP-015`) | `2 → 3`: no change but `version` (every version-2 recipe is valid in version 3) |
 
 ## 7.3 Goal definition format
 
