@@ -148,7 +148,8 @@ writes the shipped recipes again (recipes of your own are then lost).
 The list of goals may be empty, for a recipe that is not finished yet: it is listed, but loading it is refused
 ("has no goals").
 
-A recipe file may also hold the brewer's mashing plan, `mashing` (the rests planned for the mash, each with
+A recipe file may also hold the brewer's `description` (free text, possibly several lines, the recipe editor's
+Overview tab), the mashing plan, `mashing` (the rests planned for the mash, each with
 `temperature` and `minutes`, written by the recipe editor's Mashing tab), its `ingredients` (the lists
 `malts`, `hops` and `others`; a malt with `name`, `grams` and `ebc`, a hop with `name`, `alpha` and its
 `additions` of `minutes` and `grams`, another boil addition likewise without `alpha`) and

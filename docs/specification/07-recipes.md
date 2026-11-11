@@ -11,7 +11,7 @@
 
 ## 7.2 Recipe file format
 
-- `RCP-007` `[NEW]` A recipe file is a JSON object with the display `name` and the section `mashing_process`, whose `goals` are the recipe's ordered list of goal definitions (§7.3). The list may be empty (`Q-34`): such a recipe is listed and its details can be read, but it cannot be loaded (`ENG-010`); `mashing_process` itself is always required. Sections with recipe design information (e.g. grain bill, hops) are added next to `mashing_process` (`Q-31`); so far there are four, the optional mashing plan `mashing` (`RCP-012`), the optional `ingredients` (`RCP-013`), the optional `batch` (`RCP-014`) and the optional `water` (`RCP-015`). Any other key is invalid. The older format with `goals` at the top level is invalid: the error says to move `goals` into `mashing_process` (`RCP-003`).
+- `RCP-007` `[NEW]` A recipe file is a JSON object with the display `name` and the section `mashing_process`, whose `goals` are the recipe's ordered list of goal definitions (§7.3). The list may be empty (`Q-34`): such a recipe is listed and its details can be read, but it cannot be loaded (`ENG-010`); `mashing_process` itself is always required. Sections with recipe design information (e.g. grain bill, hops) are added next to `mashing_process` (`Q-31`); so far there are five, the optional `description` (`RCP-016`), the optional mashing plan `mashing` (`RCP-012`), the optional `ingredients` (`RCP-013`), the optional `batch` (`RCP-014`) and the optional `water` (`RCP-015`). Any other key is invalid. The older format with `goals` at the top level is invalid: the error says to move `goals` into `mashing_process` (`RCP-003`).
 
 ```json
 {
@@ -90,6 +90,9 @@
   with the optional `mash` (mash water), `sparge` (sparge water, for rinsing the grain while lautering) and `top_up`
   (top-up water, added after lautering to reach the original gravity), each a number ≥ 0, no other key. It is
   design information: the application checks it with the schema but does not use it, and a migration keeps it.
+- `RCP-016` `[NEW]` (`Q-44`) The optional `description` is the brewer's free text about the recipe: a string, which
+  may span several lines (`\n`) and may be empty. It is design information: the application checks it with the
+  schema but does not use it, and a migration keeps it.
 
 ```json
 "water": { "mash": 16, "sparge": 14, "top_up": 2 }
@@ -135,7 +138,7 @@
 |---|---|---|---|
 | 1 | 2026-11-06 (`Q-31`, `Q-33`) | `name` and `mashing_process` with `goals`; `version` introduced | – (first version; a file without `version` is in version 1) |
 | 2 | 2026-11-06 (`Q-34`) | `mashing_process.goals` may be empty | `1 → 2`: no change but `version` (every version-1 recipe is valid in version 2) |
-| 3 | 2026-11-10 (`Q-37`..`Q-43`) | optional mashing plan `mashing` (`RCP-012`), `ingredients` (`RCP-013`), `batch` (`RCP-014`) and `water` (`RCP-015`) | `2 → 3`: no change but `version` (every version-2 recipe is valid in version 3) |
+| 3 | 2026-11-10 (`Q-37`..`Q-44`) | optional `description` (`RCP-016`), mashing plan `mashing` (`RCP-012`), `ingredients` (`RCP-013`), `batch` (`RCP-014`) and `water` (`RCP-015`) | `2 → 3`: no change but `version` (every version-2 recipe is valid in version 3) |
 
 ## 7.3 Goal definition format
 
