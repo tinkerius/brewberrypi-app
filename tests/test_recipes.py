@@ -1,5 +1,5 @@
 """M1: recipe catalogue, one file per recipe (RCP-001..012, AC-080, AC-081, AC-084, AC-085, AC-094..101,
-AC-118, AC-119, AC-120, AC-121, Q-27, Q-29, Q-33, Q-34, Q-37, Q-38, Q-39)."""
+AC-118..AC-122, Q-27, Q-29, Q-33, Q-34, Q-37..Q-40)."""
 
 import json
 import logging
@@ -700,6 +700,34 @@ def test_AC_121_invalid_colour_bitterness_or_batch_skip_the_recipe(tmp_path: Pat
     directory = tmp_path / "recipes"
     recipe_file(directory, {"version": 3, "name": "Bad", "mashing_process": MASH_IN, **design}, "Bad")
     recipe_file(directory, {"version": 3, "name": "Good", "mashing_process": MASH_IN, **DESIGN}, "Good")
+    assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Good"]
+
+
+WATER = {"mash": 16, "sparge": 14, "top_up": 2}
+"""The brewing-day water (RCP-015)."""
+
+
+@pytest.mark.parametrize("water", [WATER, {"mash": 16}, {"sparge": 14.5}, {"top_up": 0}, {}])
+def test_AC_122_the_water_is_accepted_and_not_used(tmp_path: Path, water: Any) -> None:
+    directory = tmp_path / "recipes"
+    file = recipe_file(
+        directory, {"version": 3, "name": "Brew", "mashing_process": MASH_IN, "water": water}, "Brew"
+    )
+    recipe_file(directory, {"version": 3, "name": "Brew", "mashing_process": MASH_IN}, "Plain")
+    before = (file.read_bytes(), file.stat().st_mtime_ns)
+    catalogue = {recipe.id: recipe for recipe in load_recipes(configured(directory))}
+    assert (catalogue["Brew"].name, catalogue["Brew"].goals) == (
+        catalogue["Plain"].name,
+        catalogue["Plain"].goals,
+    )
+    assert (file.read_bytes(), file.stat().st_mtime_ns) == before
+
+
+@pytest.mark.parametrize("water", [[], 16, {"strike": 16}, {"mash": -1}, {"sparge": "14"}, {"top_up": None}])
+def test_AC_122_invalid_water_skips_the_recipe(tmp_path: Path, water: Any) -> None:
+    directory = tmp_path / "recipes"
+    recipe_file(directory, {"version": 3, "name": "Bad", "mashing_process": MASH_IN, "water": water}, "Bad")
+    recipe_file(directory, {"version": 3, "name": "Good", "mashing_process": MASH_IN, "water": WATER}, "Good")
     assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Good"]
 
 

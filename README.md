@@ -151,7 +151,8 @@ The list of goals may be empty, for a recipe that is not finished yet: it is lis
 A recipe file may also hold the brewer's mashing plan, `mashing` (the rests planned for the mash, each with
 `temperature` and `minutes`, written by the recipe editor's Mashing tab), its `ingredients` (the lists
 `malts` and `hops`, each entry with `name` and `grams`, a malt also `ebc`, a hop `alpha` and `minutes`) and
-its `batch` (`liters` and `plato`), both written by the recipe editor's Malt and Hops tabs. The application checks
+its `batch` (`liters`, the knockout volume, and `plato`), written by the recipe editor's Malt and Hops tabs,
+and its `water` (`mash`, `sparge` and `top_up` in litres, the Water tab). The application checks
 them but does not use them: the goals alone are brewed.
 
 `version` is the version of the recipe file format (today 3; a file without it is in version 1). A
