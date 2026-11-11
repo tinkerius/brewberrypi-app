@@ -147,7 +147,9 @@
             "acid_malt": { "description": "Acid malt in % of the grist.", "type": "number", "minimum": 0, "maximum": 100 },
             "lactic_acid": { "description": "Lactic acid 80 % in ml per 10 L.", "type": "number", "minimum": 0 }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "if": { "properties": { "boil": { "const": true } }, "required": ["boil"] },
+          "then": { "required": ["carbonate_hardness"] }
         }
       },
       "additionalProperties": false

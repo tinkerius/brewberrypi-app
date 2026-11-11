@@ -1,5 +1,5 @@
 """M1: recipe catalogue, one file per recipe (RCP-001..012, AC-080, AC-081, AC-084, AC-085, AC-094..101,
-AC-118..AC-128, Q-27, Q-29, Q-33, Q-34, Q-37..Q-46)."""
+AC-118..AC-128, Q-27, Q-29, Q-33, Q-34, Q-37..Q-47)."""
 
 import json
 import logging
@@ -1140,7 +1140,16 @@ TREATMENT = {
 
 
 @pytest.mark.parametrize(
-    "treatment", [TREATMENT, {"alkalinity": -2.5}, {"boil": False}, {"acid_malt": 100}, {"gypsum": 0}, {}]
+    "treatment",
+    [
+        TREATMENT,
+        {"alkalinity": -2.5},
+        {"boil": False},
+        {"boil": True, "carbonate_hardness": 2},
+        {"acid_malt": 100},
+        {"gypsum": 0},
+        {},
+    ],
 )
 def test_AC_128_the_water_treatment_is_accepted_and_not_used(tmp_path: Path, treatment: Any) -> None:
     directory = tmp_path / "recipes"
@@ -1170,6 +1179,8 @@ def test_AC_128_the_water_treatment_is_accepted_and_not_used(tmp_path: Path, tre
         {"acid_malt": 101},
         {"boil": "yes"},
         {"boil": 1},
+        {"boil": True},
+        {"boil": True, "alkalinity": 10.3},
     ],
 )
 def test_AC_128_an_invalid_water_treatment_skips_the_recipe(tmp_path: Path, treatment: Any) -> None:

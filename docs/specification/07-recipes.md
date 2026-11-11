@@ -91,7 +91,7 @@
   (top-up water, added after lautering to reach the original gravity), each a number ≥ 0, and the optional
   `treatment` (`Q-46`), the water treatment for the residual alkalinity: an object with the optional `alkalinity`
   (the tap water's residual alkalinity in °dH, a number), `carbonate_hardness` (the tap water's carbonate hardness in
-  °dH, a number ≥ 0), `boil` (whether the brewing water is boiled, a boolean), `gypsum` (brewing gypsum in g per
+  °dH, a number ≥ 0), `boil` (whether the mash water is boiled, a boolean; when it is `true`, `carbonate_hardness` is required, `Q-47`), `gypsum` (brewing gypsum in g per
   10 L, a number ≥ 0), `acid_malt` (acid malt in % of the grist, a number from 0 to 100) and `lactic_acid` (lactic
   acid 80 % in ml per 10 L, a number ≥ 0), no other key; no other key in `water`. It is
   design information: the application checks it with the schema but does not use it, and a migration keeps it.
