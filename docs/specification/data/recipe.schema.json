@@ -69,25 +69,37 @@
     },
     "hop": {
       "type": "object",
-      "required": ["name", "grams"],
+      "required": ["name", "additions"],
       "properties": {
         "name": { "$ref": "#/$defs/text" },
-        "grams": { "$ref": "#/$defs/grams" },
         "alpha": { "description": "Alpha acid in percent (Q-39).", "type": "number", "minimum": 0, "maximum": 100 },
-        "minutes": { "description": "Boil time (Q-39).", "$ref": "#/$defs/minutes" }
+        "additions": { "$ref": "#/$defs/additions" }
       },
       "additionalProperties": false
     },
     "other": {
       "description": "Another boil addition, e.g. Irish moss (Q-42): like a hop without alpha acid.",
       "type": "object",
-      "required": ["name", "grams"],
+      "required": ["name", "additions"],
       "properties": {
         "name": { "$ref": "#/$defs/text" },
-        "grams": { "$ref": "#/$defs/grams" },
-        "minutes": { "description": "Boil time.", "$ref": "#/$defs/minutes" }
+        "additions": { "$ref": "#/$defs/additions" }
       },
       "additionalProperties": false
+    },
+    "additions": {
+      "description": "When and how much goes into the boil (Q-43): at least one addition, in the brewer's order.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["grams"],
+        "properties": {
+          "minutes": { "description": "Boil time.", "$ref": "#/$defs/minutes" },
+          "grams": { "$ref": "#/$defs/grams" }
+        },
+        "additionalProperties": false
+      }
     },
     "grams": { "description": "Amount in grams.", "type": "integer", "minimum": 1 },
     "water": {

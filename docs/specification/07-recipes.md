@@ -56,10 +56,12 @@
 - `RCP-013` `[NEW]` (`Q-38`) The optional section `ingredients` is the brewer's list of ingredients, written with
   the recipe editor. It is an object with the optional lists `malts`, `hops` and `others` (other boil additions such
   as Irish moss or spices; `Q-42`) and no other key. Each list holds
-  entries in the brewer's order; an entry is an object with `name` (a non-empty string) and `grams` (the amount in
-  grams, an integer ≥ 1), both required, and optionally (`Q-39`): for a malt `ebc` (its colour in EBC, a number
-  ≥ 0); for a hop `alpha` (its alpha acid in percent, a number from 0 to 100) and `minutes` (its boil time, an
-  integer ≥ 0); for another addition `minutes` (no `alpha`). No other key. The same name may appear more than once. A list may be empty. Shares of the total
+  entries in the brewer's order, each an object with `name` (a non-empty string). A malt has `grams` (the amount in
+  grams, an integer ≥ 1, required) and optionally `ebc` (its colour in EBC, a number ≥ 0; `Q-39`). A hop has
+  optionally `alpha` (its alpha acid in percent, a number from 0 to 100; `Q-39`) and the required list `additions`
+  (`Q-43`) of at least one addition, an object with `grams` (required, as above) and optionally `minutes` (its boil
+  time, an integer ≥ 0), in the brewer's order. Another addition is like a hop without `alpha`. No other key. The
+  same name may appear more than once. A list may be empty. Shares of the total
   weight, the beer colour and the bitterness are not stored: the recipe editor computes them. Like the mashing plan, the
   ingredients are design information: the application checks them with the schema but does not use them, and a
   migration keeps them.
@@ -67,8 +69,10 @@
 ```json
 "ingredients": {
   "malts": [ { "name": "Pilsner malt", "grams": 4500, "ebc": 3.5 }, { "name": "Munich malt", "grams": 500, "ebc": 15 } ],
-  "hops": [ { "name": "Hallertauer Tradition", "grams": 30, "alpha": 5.5, "minutes": 60 } ],
-  "others": [ { "name": "Irish Moss", "grams": 10, "minutes": 5 } ]
+  "hops": [
+    { "name": "Hallertauer Tradition", "alpha": 5.5, "additions": [ { "minutes": 60, "grams": 20 }, { "minutes": 10, "grams": 10 } ] }
+  ],
+  "others": [ { "name": "Irish Moss", "additions": [ { "minutes": 5, "grams": 10 } ] } ]
 }
 ```
 
@@ -131,7 +135,7 @@
 |---|---|---|---|
 | 1 | 2026-11-06 (`Q-31`, `Q-33`) | `name` and `mashing_process` with `goals`; `version` introduced | – (first version; a file without `version` is in version 1) |
 | 2 | 2026-11-06 (`Q-34`) | `mashing_process.goals` may be empty | `1 → 2`: no change but `version` (every version-1 recipe is valid in version 2) |
-| 3 | 2026-11-10 (`Q-37`..`Q-42`) | optional mashing plan `mashing` (`RCP-012`), `ingredients` (`RCP-013`), `batch` (`RCP-014`) and `water` (`RCP-015`) | `2 → 3`: no change but `version` (every version-2 recipe is valid in version 3) |
+| 3 | 2026-11-10 (`Q-37`..`Q-43`) | optional mashing plan `mashing` (`RCP-012`), `ingredients` (`RCP-013`), `batch` (`RCP-014`) and `water` (`RCP-015`) | `2 → 3`: no change but `version` (every version-2 recipe is valid in version 3) |
 
 ## 7.3 Goal definition format
 

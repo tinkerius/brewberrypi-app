@@ -1,5 +1,5 @@
 """M1: recipe catalogue, one file per recipe (RCP-001..012, AC-080, AC-081, AC-084, AC-085, AC-094..101,
-AC-118..AC-124, Q-27, Q-29, Q-33, Q-34, Q-37..Q-42)."""
+AC-118..AC-125, Q-27, Q-29, Q-33, Q-34, Q-37..Q-43)."""
 
 import json
 import logging
@@ -564,7 +564,7 @@ def test_AC_119_an_invalid_mashing_plan_skips_the_recipe(tmp_path: Path, mashing
 
 INGREDIENTS = {
     "malts": [{"name": "Pilsner malt", "grams": 4500}, {"name": "Munich malt", "grams": 500}],
-    "hops": [{"name": "Hallertauer Tradition", "grams": 30}],
+    "hops": [{"name": "Hallertauer Tradition", "additions": [{"grams": 30}]}],
 }
 """Valid ingredients (RCP-013)."""
 
@@ -606,10 +606,10 @@ def test_AC_120_valid_ingredients_are_accepted_and_not_used(tmp_path: Path, ingr
         {"malts": [{"grams": 4500}]},
         {"malts": [{"name": "Pilsner malt"}]},
         {"malts": [{"name": "", "grams": 4500}]},
-        {"hops": [{"name": "Saaz", "grams": 0}]},
-        {"hops": [{"name": "Saaz", "grams": 12.5}]},
-        {"hops": [{"name": "Saaz", "grams": "30"}]},
-        {"hops": [{"name": "Saaz", "grams": 30, "percent": 100}]},
+        {"hops": [{"name": "Saaz", "additions": [{"grams": 0}]}]},
+        {"hops": [{"name": "Saaz", "additions": [{"grams": 12.5}]}]},
+        {"hops": [{"name": "Saaz", "additions": [{"grams": "30"}]}]},
+        {"hops": [{"name": "Saaz", "additions": [{"grams": 30}], "percent": 100}]},
     ],
 )
 def test_AC_120_invalid_ingredients_skip_the_recipe(tmp_path: Path, ingredients: Any) -> None:
@@ -634,9 +634,9 @@ DESIGN = {
             {"name": "Rice", "grams": 500, "ebc": 0},
         ],
         "hops": [
-            {"name": "Magnum", "grams": 20, "alpha": 5.5, "minutes": 60},
-            {"name": "Dry", "grams": 10, "alpha": 0, "minutes": 0},
-            {"name": "Pure", "grams": 1, "alpha": 100},
+            {"name": "Magnum", "alpha": 5.5, "additions": [{"minutes": 60, "grams": 20}]},
+            {"name": "Dry", "alpha": 0, "additions": [{"minutes": 0, "grams": 10}]},
+            {"name": "Pure", "alpha": 100, "additions": [{"grams": 1}]},
         ],
     },
     "batch": {"liters": 20, "plato": 12.6},
@@ -672,8 +672,10 @@ def _malt(**fields: Any) -> dict[str, Any]:
     return {"ingredients": {"malts": [{"name": "M", "grams": 1, **fields}]}}
 
 
-def _hop(**fields: Any) -> dict[str, Any]:
-    return {"ingredients": {"hops": [{"name": "H", "grams": 1, **fields}]}}
+def _hop(addition: dict[str, Any] | None = None, **fields: Any) -> dict[str, Any]:
+    return {
+        "ingredients": {"hops": [{"name": "H", "additions": [{"grams": 1, **(addition or {})}], **fields}]}
+    }
 
 
 @pytest.mark.parametrize(
@@ -685,8 +687,8 @@ def _hop(**fields: Any) -> dict[str, Any]:
         _hop(alpha=-0.1),
         _hop(alpha=100.5),
         _hop(alpha="5"),
-        _hop(minutes=1.5),
-        _hop(minutes=-1),
+        _hop({"minutes": 1.5}),
+        _hop({"minutes": -1}),
         _hop(ebc=3),
         {"batch": []},
         {"batch": {"gallons": 5}},
@@ -759,7 +761,12 @@ def test_AC_123_an_invalid_final_gravity_skips_the_recipe(tmp_path: Path, final:
 
 
 @pytest.mark.parametrize(
-    "others", [[{"name": "Irish Moss", "grams": 10, "minutes": 5}], [{"name": "Coriander", "grams": 15}], []]
+    "others",
+    [
+        [{"name": "Irish Moss", "additions": [{"minutes": 5, "grams": 10}]}],
+        [{"name": "Coriander", "additions": [{"grams": 15}]}],
+        [],
+    ],
 )
 def test_AC_124_other_additions_are_accepted_and_not_used(tmp_path: Path, others: Any) -> None:
     directory = tmp_path / "recipes"
@@ -777,16 +784,47 @@ def test_AC_124_other_additions_are_accepted_and_not_used(tmp_path: Path, others
 @pytest.mark.parametrize(
     "other",
     [
-        {"name": "Irish Moss", "grams": 10, "alpha": 5},
-        {"grams": 10},
-        {"name": "Irish Moss"},
-        {"name": "Irish Moss", "grams": 10, "minutes": 2.5},
-        {"name": "Irish Moss", "grams": 10, "ebc": 3},
+        {"name": "Irish Moss", "alpha": 5, "additions": [{"grams": 10}]},
+        {"additions": [{"grams": 10}]},
+        {"name": "Irish Moss", "additions": [{"minutes": 5}]},
+        {"name": "Irish Moss", "additions": [{"grams": 10, "minutes": 2.5}]},
+        {"name": "Irish Moss", "ebc": 3, "additions": [{"grams": 10}]},
     ],
 )
 def test_AC_124_an_invalid_other_addition_skips_the_recipe(tmp_path: Path, other: Any) -> None:
     directory = tmp_path / "recipes"
     bad = {"version": 3, "name": "Bad", "mashing_process": MASH_IN, "ingredients": {"others": [other]}}
+    recipe_file(directory, bad, "Bad")
+    recipe_file(directory, {"version": 3, "name": "Good", "mashing_process": MASH_IN, **DESIGN}, "Good")
+    assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Good"]
+
+
+def test_AC_125_a_hop_with_several_additions_is_accepted_and_not_used(tmp_path: Path) -> None:
+    directory = tmp_path / "recipes"
+    hop = {"name": "Hallertauer", "alpha": 12, "additions": [{"minutes": 60, "grams": 20}, {"grams": 10}]}
+    content = {"version": 3, "name": "Brew", "mashing_process": MASH_IN, "ingredients": {"hops": [hop]}}
+    file = recipe_file(directory, content, "Brew")
+    before = (file.read_bytes(), file.stat().st_mtime_ns)
+    assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Brew"]
+    assert (file.read_bytes(), file.stat().st_mtime_ns) == before
+
+
+@pytest.mark.parametrize(
+    "hop",
+    [
+        {"name": "H"},
+        {"name": "H", "additions": []},
+        {"name": "H", "additions": [{"minutes": 60}]},
+        {"name": "H", "additions": [{"grams": 0}]},
+        {"name": "H", "additions": [{"grams": 10, "alpha": 5}]},
+        {"name": "H", "grams": 10, "additions": [{"grams": 10}]},
+        {"name": "H", "minutes": 60, "additions": [{"grams": 10}]},
+        {"name": "H", "additions": {"grams": 10}},
+    ],
+)
+def test_AC_125_a_hop_without_valid_additions_skips_the_recipe(tmp_path: Path, hop: Any) -> None:
+    directory = tmp_path / "recipes"
+    bad = {"version": 3, "name": "Bad", "mashing_process": MASH_IN, "ingredients": {"hops": [hop]}}
     recipe_file(directory, bad, "Bad")
     recipe_file(directory, {"version": 3, "name": "Good", "mashing_process": MASH_IN, **DESIGN}, "Good")
     assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Good"]
