@@ -32,14 +32,17 @@
 - `RCP-012` `[NEW]` (`Q-37`) The optional section `mashing` is the brewer's **mashing plan**: the rests the brewer
   plans for the mash, written with the recipe editor. It is an object whose keys are rest ids from the table
   below, each at most once; any other key is invalid. Each value is an object with exactly `temperature` (°C, a
-  number from 0 to 110) and `minutes` (an integer ≥ 0), both required. The order of the keys has no meaning; the
+  number from 0 to 110) and `minutes` (an integer ≥ 0), both required. The first entry, `MashIn` (`Q-48`), is not
+  a rest but the mash-in, adding the malt to the water: it has exactly `temperature`, required, and no `minutes`;
+  a plan with any entry must have it (an empty `mashing`, `{}`, is valid). The order of the keys has no meaning; the
   recipe editor writes them in the order of the table. The mashing plan is design information: the application
   checks it with the schema but does not use it (it does not change the goals, the recipe list or the recipe
   details, `IF-031`), and a migration keeps it.
 
 | Rest id | Rest |
 |---|---|
-| `PreMash` | Pre-mash / Dough-in rest (soaking) |
+| `MashIn` | Mash in (adding the malt to the water; temperature only) |
+| `PreMash` | Soak |
 | `AcidRest` | Acid rest / Phytase rest |
 | `BetaGlucanRest` | Beta-glucan rest (gum rest) |
 | `FerulicAcidRest` | Ferulic acid rest |
@@ -50,7 +53,7 @@
 | `MashOut` | Mash-out |
 
 ```json
-"mashing": { "MaltoseRest": { "temperature": 63, "minutes": 45 }, "SaccharificationRest": { "temperature": 72, "minutes": 30 } }
+"mashing": { "MashIn": { "temperature": 57 }, "MaltoseRest": { "temperature": 63, "minutes": 45 }, "SaccharificationRest": { "temperature": 72, "minutes": 30 } }
 ```
 
 - `RCP-013` `[NEW]` (`Q-38`) The optional section `ingredients` is the brewer's list of ingredients, written with

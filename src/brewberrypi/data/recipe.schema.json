@@ -31,9 +31,10 @@
       "additionalProperties": false
     },
     "mashing": {
-      "description": "The mashing plan (RCP-012, Q-37): the rests the brewer plans, each at most once, keyed by rest id. Not used by the application.",
+      "description": "The mashing plan (RCP-012, Q-37): the mash-in (MashIn, required in a non-empty plan, Q-48) and the rests the brewer plans, each at most once, keyed by rest id. Not used by the application.",
       "type": "object",
       "properties": {
+        "MashIn": { "$ref": "#/$defs/mashIn" },
         "PreMash": { "$ref": "#/$defs/mashRest" },
         "AcidRest": { "$ref": "#/$defs/mashRest" },
         "BetaGlucanRest": { "$ref": "#/$defs/mashRest" },
@@ -44,6 +45,15 @@
         "SaccharificationRest": { "$ref": "#/$defs/mashRest" },
         "MashOut": { "$ref": "#/$defs/mashRest" }
       },
+      "additionalProperties": false,
+      "if": { "minProperties": 1 },
+      "then": { "required": ["MashIn"] }
+    },
+    "mashIn": {
+      "description": "The mash-in (Q-48): adding the malt to the water, at this temperature; no duration.",
+      "type": "object",
+      "required": ["temperature"],
+      "properties": { "temperature": { "$ref": "#/$defs/temperature" } },
       "additionalProperties": false
     },
     "mashRest": {

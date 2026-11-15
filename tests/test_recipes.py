@@ -515,8 +515,12 @@ def test_AC_118_a_version_2_file_is_written_back_as_version_3(tmp_path: Path) ->
     assert (directory / BACKUP_DIRECTORY / "Old.v2.json").read_text() == original_text
 
 
-MASHING = {"MaltoseRest": {"temperature": 63, "minutes": 45}, "MashOut": {"temperature": 78, "minutes": 10}}
-"""A valid mashing plan (RCP-012)."""
+MASHING = {
+    "MashIn": {"temperature": 57},
+    "MaltoseRest": {"temperature": 63, "minutes": 45},
+    "MashOut": {"temperature": 78, "minutes": 10},
+}
+"""A valid mashing plan (RCP-012), with its mash-in (Q-48)."""
 
 
 def test_AC_119_a_valid_mashing_plan_is_accepted_and_not_used(tmp_path: Path) -> None:
@@ -536,19 +540,32 @@ def test_AC_119_a_valid_mashing_plan_is_accepted_and_not_used(tmp_path: Path) ->
     assert not (directory / BACKUP_DIRECTORY).exists()
 
 
+@pytest.mark.parametrize("mashing", [{"MashIn": {"temperature": 57}}, {}])
+def test_AC_119_a_plan_with_only_the_mash_in_or_empty_is_accepted(tmp_path: Path, mashing: Any) -> None:
+    directory = tmp_path / "recipes"
+    recipe_file(
+        directory, {"version": 3, "name": "Plan", "mashing_process": MASH_IN, "mashing": mashing}, "Plan"
+    )
+    assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Plan"]
+
+
 @pytest.mark.parametrize(
     "mashing",
     [
         [],
         "MaltoseRest",
-        {"MainRest": {"temperature": 63, "minutes": 45}},
-        {"MaltoseRest": {"minutes": 45}},
-        {"MaltoseRest": {"temperature": 63}},
-        {"MaltoseRest": {"temperature": 111, "minutes": 45}},
-        {"MaltoseRest": {"temperature": "63", "minutes": 45}},
-        {"MaltoseRest": {"temperature": 63, "minutes": 4.5}},
-        {"MaltoseRest": {"temperature": 63, "minutes": -1}},
-        {"MaltoseRest": {"temperature": 63, "minutes": 45, "name": "Maltoserast"}},
+        {"MashIn": {"temperature": 57}, "MainRest": {"temperature": 63, "minutes": 45}},
+        {"MashIn": {"temperature": 57}, "MaltoseRest": {"minutes": 45}},
+        {"MashIn": {"temperature": 57}, "MaltoseRest": {"temperature": 63}},
+        {"MashIn": {"temperature": 57}, "MaltoseRest": {"temperature": 111, "minutes": 45}},
+        {"MashIn": {"temperature": 57}, "MaltoseRest": {"temperature": "63", "minutes": 45}},
+        {"MashIn": {"temperature": 57}, "MaltoseRest": {"temperature": 63, "minutes": 4.5}},
+        {"MashIn": {"temperature": 57}, "MaltoseRest": {"temperature": 63, "minutes": -1}},
+        {"MashIn": {"temperature": 57}, "MaltoseRest": {"temperature": 63, "minutes": 45, "name": "Maltoserast"}},
+        {"MaltoseRest": {"temperature": 63, "minutes": 45}},
+        {"MashIn": {}, "MaltoseRest": {"temperature": 63, "minutes": 45}},
+        {"MashIn": {"temperature": 57, "minutes": 10}},
+        {"MashIn": {"temperature": 111}},
     ],
 )
 def test_AC_119_an_invalid_mashing_plan_skips_the_recipe(tmp_path: Path, mashing: Any) -> None:
