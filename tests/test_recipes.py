@@ -540,7 +540,9 @@ def test_AC_119_a_valid_mashing_plan_is_accepted_and_not_used(tmp_path: Path) ->
     assert not (directory / BACKUP_DIRECTORY).exists()
 
 
-@pytest.mark.parametrize("mashing", [{"MashIn": {"temperature": 57}}, {}])
+@pytest.mark.parametrize(
+    "mashing", [{"MashIn": {"temperature": 57}}, {}, {**MASHING, "IodineTest": {}}]
+)
 def test_AC_119_a_plan_with_only_the_mash_in_or_empty_is_accepted(tmp_path: Path, mashing: Any) -> None:
     directory = tmp_path / "recipes"
     recipe_file(
@@ -566,6 +568,9 @@ def test_AC_119_a_plan_with_only_the_mash_in_or_empty_is_accepted(tmp_path: Path
         {"MashIn": {}, "MaltoseRest": {"temperature": 63, "minutes": 45}},
         {"MashIn": {"temperature": 57, "minutes": 10}},
         {"MashIn": {"temperature": 111}},
+        {**MASHING, "IodineTest": {"minutes": 10}},
+        {**MASHING, "IodineTest": True},
+        {"IodineTest": {}},
     ],
 )
 def test_AC_119_an_invalid_mashing_plan_skips_the_recipe(tmp_path: Path, mashing: Any) -> None:

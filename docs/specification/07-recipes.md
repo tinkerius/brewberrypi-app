@@ -34,7 +34,9 @@
   below, each at most once; any other key is invalid. Each value is an object with exactly `temperature` (°C, a
   number from 0 to 110) and `minutes` (an integer ≥ 0), both required. The first entry, `MashIn` (`Q-48`), is not
   a rest but the mash-in, adding the malt to the water: it has exactly `temperature`, required, and no `minutes`;
-  a plan with any entry must have it (an empty `mashing`, `{}`, is valid). The order of the keys has no meaning; the
+  a plan with any entry must have it (an empty `mashing`, `{}`, is valid). `IodineTest` (`Q-49`) is not a rest
+  either but a marker, "do the iodine test here" (between the saccharification rest and the mash-out): an empty
+  object, `{}`, with no fields. The order of the keys has no meaning; the
   recipe editor writes them in the order of the table. The mashing plan is design information: the application
   checks it with the schema but does not use it (it does not change the goals, the recipe list or the recipe
   details, `IF-031`), and a migration keeps it.
@@ -50,6 +52,7 @@
 | `MaltoseRest` | Maltose rest (beta-amylase rest) |
 | `CombinedRest` | Combined rest (single infusion) |
 | `SaccharificationRest` | Saccharification rest (dextrinization / alpha-amylase rest) |
+| `IodineTest` | Iodine test (a marker; no fields) |
 | `MashOut` | Mash-out |
 
 ```json

@@ -43,6 +43,7 @@
         "MaltoseRest": { "$ref": "#/$defs/mashRest" },
         "CombinedRest": { "$ref": "#/$defs/mashRest" },
         "SaccharificationRest": { "$ref": "#/$defs/mashRest" },
+        "IodineTest": { "description": "A marker, do the iodine test here (Q-49): no fields.", "type": "object", "additionalProperties": false },
         "MashOut": { "$ref": "#/$defs/mashRest" }
       },
       "additionalProperties": false,
