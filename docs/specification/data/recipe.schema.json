@@ -18,6 +18,7 @@
     "ingredients": { "$ref": "#/$defs/ingredients" },
     "batch": { "$ref": "#/$defs/batch" },
     "water": { "$ref": "#/$defs/water" },
+    "boil": { "$ref": "#/$defs/boil" },
     "fermentation": { "$ref": "#/$defs/fermentation" }
   },
   "additionalProperties": false,
@@ -118,6 +119,14 @@
       }
     },
     "grams": { "description": "Amount in grams.", "type": "integer", "minimum": 1 },
+    "boil": {
+      "description": "After the boil (RCP-018, Q-50): whether the brewer does a whirlpool. Not used by the application.",
+      "type": "object",
+      "properties": {
+        "whirlpool": { "description": "true: a whirlpool after the boil (the recipe editor leaves boil out otherwise).", "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
     "fermentation": {
       "description": "The fermentation (RCP-017, Q-45): the yeast and the target carbonation. Not used by the application.",
       "type": "object",

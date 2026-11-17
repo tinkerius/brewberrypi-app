@@ -1,5 +1,5 @@
 """M1: recipe catalogue, one file per recipe (RCP-001..012, AC-080, AC-081, AC-084, AC-085, AC-094..101,
-AC-118..AC-128, Q-27, Q-29, Q-33, Q-34, Q-37..Q-47)."""
+AC-118..AC-129, Q-27, Q-29, Q-33, Q-34, Q-37..Q-50)."""
 
 import json
 import logging
@@ -540,9 +540,7 @@ def test_AC_119_a_valid_mashing_plan_is_accepted_and_not_used(tmp_path: Path) ->
     assert not (directory / BACKUP_DIRECTORY).exists()
 
 
-@pytest.mark.parametrize(
-    "mashing", [{"MashIn": {"temperature": 57}}, {}, {**MASHING, "IodineTest": {}}]
-)
+@pytest.mark.parametrize("mashing", [{"MashIn": {"temperature": 57}}, {}, {**MASHING, "IodineTest": {}}])
 def test_AC_119_a_plan_with_only_the_mash_in_or_empty_is_accepted(tmp_path: Path, mashing: Any) -> None:
     directory = tmp_path / "recipes"
     recipe_file(
@@ -563,7 +561,10 @@ def test_AC_119_a_plan_with_only_the_mash_in_or_empty_is_accepted(tmp_path: Path
         {"MashIn": {"temperature": 57}, "MaltoseRest": {"temperature": "63", "minutes": 45}},
         {"MashIn": {"temperature": 57}, "MaltoseRest": {"temperature": 63, "minutes": 4.5}},
         {"MashIn": {"temperature": 57}, "MaltoseRest": {"temperature": 63, "minutes": -1}},
-        {"MashIn": {"temperature": 57}, "MaltoseRest": {"temperature": 63, "minutes": 45, "name": "Maltoserast"}},
+        {
+            "MashIn": {"temperature": 57},
+            "MaltoseRest": {"temperature": 63, "minutes": 45, "name": "Maltoserast"},
+        },
         {"MaltoseRest": {"temperature": 63, "minutes": 45}},
         {"MashIn": {}, "MaltoseRest": {"temperature": 63, "minutes": 45}},
         {"MashIn": {"temperature": 57, "minutes": 10}},
@@ -1210,5 +1211,33 @@ def test_AC_128_an_invalid_water_treatment_skips_the_recipe(tmp_path: Path, trea
     bad = {"version": 3, "name": "Bad", "mashing_process": MASH_IN, "water": {"treatment": treatment}}
     recipe_file(directory, bad, "Bad")
     good = {"version": 3, "name": "Good", "mashing_process": MASH_IN, "water": {"treatment": TREATMENT}}
+    recipe_file(directory, good, "Good")
+    assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Good"]
+
+
+@pytest.mark.parametrize("boil", [{"whirlpool": True}, {"whirlpool": False}, {}])
+def test_AC_129_the_boil_is_accepted_and_not_used(tmp_path: Path, boil: Any) -> None:
+    directory = tmp_path / "recipes"
+    file = recipe_file(
+        directory, {"version": 3, "name": "Brew", "mashing_process": MASH_IN, "boil": boil}, "Brew"
+    )
+    recipe_file(directory, {"version": 3, "name": "Brew", "mashing_process": MASH_IN}, "Plain")
+    before = (file.read_bytes(), file.stat().st_mtime_ns)
+    catalogue = {recipe.id: recipe for recipe in load_recipes(configured(directory))}
+    assert (catalogue["Brew"].name, catalogue["Brew"].goals) == (
+        catalogue["Plain"].name,
+        catalogue["Plain"].goals,
+    )
+    assert (file.read_bytes(), file.stat().st_mtime_ns) == before
+
+
+@pytest.mark.parametrize(
+    "boil",
+    [[], True, {"whirlpool": "yes"}, {"whirlpool": 1}, {"whirlpool": True, "minutes": 15}],
+)
+def test_AC_129_an_invalid_boil_skips_the_recipe(tmp_path: Path, boil: Any) -> None:
+    directory = tmp_path / "recipes"
+    recipe_file(directory, {"version": 3, "name": "Bad", "mashing_process": MASH_IN, "boil": boil}, "Bad")
+    good = {"version": 3, "name": "Good", "mashing_process": MASH_IN, "boil": {"whirlpool": True}}
     recipe_file(directory, good, "Good")
     assert [recipe.id for recipe in load_recipes(configured(directory))] == ["Good"]
