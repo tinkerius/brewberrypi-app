@@ -11,7 +11,7 @@
 
 ## 7.2 Recipe file format
 
-- `RCP-007` `[NEW]` A recipe file is a JSON object with the display `name` and the section `mashing_process`, whose `goals` are the recipe's ordered list of goal definitions (§7.3). The list may be empty (`Q-34`): such a recipe is listed and its details can be read, but it cannot be loaded (`ENG-010`); `mashing_process` itself is always required. Sections with recipe design information (e.g. grain bill, hops) are added next to `mashing_process` (`Q-31`); so far there are seven, the optional `description` (`RCP-016`), the optional mashing plan `mashing` (`RCP-012`), the optional `ingredients` (`RCP-013`), the optional `batch` (`RCP-014`), the optional `water` (`RCP-015`), the optional `boil` (`RCP-018`) and the optional `fermentation` (`RCP-017`). Any other key is invalid. The older format with `goals` at the top level is invalid: the error says to move `goals` into `mashing_process` (`RCP-003`).
+- `RCP-007` `[NEW]` A recipe file is a JSON object with the display `name` and the section `mashing_process`, whose `goals` are the recipe's ordered list of goal definitions (§7.3). The list may be empty (`Q-34`): such a recipe is listed and its details can be read, but it cannot be loaded (`ENG-010`); `mashing_process` itself is always required. Sections with recipe design information (e.g. grain bill, hops) are added next to `mashing_process` (`Q-31`); so far there are five, all optional (the recipe editor writes them in this order): the `description` (`RCP-016`), the `mashing` with the malts and the mashing plan (`RCP-012`), the `boiling` with the whirlpool, the hops and the other boil additions (`RCP-018`, `RCP-013`), the `water` (`RCP-015`) and the `fermentation` (`RCP-017`) (`Q-51`). Any other key is invalid. The older format with `goals` at the top level is invalid: the error says to move `goals` into `mashing_process` (`RCP-003`).
 
 ```json
 {
@@ -29,15 +29,17 @@
 
 `$schema` is optional and ignored by the application.
 
-- `RCP-012` `[NEW]` (`Q-37`) The optional section `mashing` is the brewer's **mashing plan**: the rests the brewer
-  plans for the mash, written with the recipe editor. It is an object whose keys are rest ids from the table
+- `RCP-012` `[NEW]` (`Q-37`, `Q-51`) The optional section `mashing` holds the mash: an object with the optional
+  list `malts` (the malts, in the brewer's order; entries as in `RCP-013`) and the optional mashing plan `rests`,
+  no other key. The mashing plan `rests` is the rests the brewer plans for the mash, written with the recipe
+  editor. It is an object whose keys are rest ids from the table
   below, each at most once; any other key is invalid. Each value is an object with exactly `temperature` (°C, a
   number from 0 to 110) and `minutes` (an integer ≥ 0), both required. The first entry, `MashIn` (`Q-48`), is not
   a rest but the mash-in, adding the malt to the water: it has exactly `temperature`, required, and no `minutes`;
-  a plan with any entry must have it (an empty `mashing`, `{}`, is valid). `IodineTest` (`Q-49`) is not a rest
+  a plan with any entry must have it (an empty `rests`, `{}`, is valid, and so is an empty `mashing`). `IodineTest` (`Q-49`) is not a rest
   either but a marker, "do the iodine test here" (between the saccharification rest and the mash-out): an empty
   object, `{}`, with no fields. The order of the keys has no meaning; the
-  recipe editor writes them in the order of the table. The mashing plan is design information: the application
+  recipe editor writes `malts` before `rests` and the rests in the order of the table. The mashing is design information: the application
   checks it with the schema but does not use it (it does not change the goals, the recipe list or the recipe
   details, `IF-031`), and a migration keeps it.
 
@@ -56,12 +58,15 @@
 | `MashOut` | Mash-out |
 
 ```json
-"mashing": { "MashIn": { "temperature": 57 }, "MaltoseRest": { "temperature": 63, "minutes": 45 }, "SaccharificationRest": { "temperature": 72, "minutes": 30 } }
+"mashing": {
+  "malts": [ { "name": "Pilsner malt", "grams": 4500, "ebc": 3.5 }, { "name": "Munich malt", "grams": 500, "ebc": 15 } ],
+  "rests": { "MashIn": { "temperature": 57 }, "MaltoseRest": { "temperature": 63, "minutes": 45 }, "SaccharificationRest": { "temperature": 72, "minutes": 30 } }
+}
 ```
 
-- `RCP-013` `[NEW]` (`Q-38`) The optional section `ingredients` is the brewer's list of ingredients, written with
-  the recipe editor. It is an object with the optional lists `malts`, `hops` and `others` (other boil additions such
-  as Irish moss or spices; `Q-42`) and no other key. Each list holds
+- `RCP-013` `[NEW]` (`Q-38`, `Q-51`) The brewer's ingredients are three lists, written with the recipe editor: the
+  malts `mashing.malts` (`RCP-012`), the hops `boiling.hops` and the other boil additions `boiling.others` (such as
+  Irish moss or spices; `Q-42`) (`RCP-018`). Each list holds
   entries in the brewer's order, each an object with `name` (a non-empty string). A malt has `grams` (the amount in
   grams, an integer ≥ 1, required) and optionally `ebc` (its colour in EBC, a number ≥ 0; `Q-39`). A hop has
   optionally `alpha` (its alpha acid in percent, a number from 0 to 100; `Q-39`) and the required list `additions`
@@ -71,51 +76,55 @@
   weight, the beer colour and the bitterness are not stored: the recipe editor computes them. Like the mashing plan, the
   ingredients are design information: the application checks them with the schema but does not use them, and a
   migration keeps them.
-
-```json
-"ingredients": {
-  "malts": [ { "name": "Pilsner malt", "grams": 4500, "ebc": 3.5 }, { "name": "Munich malt", "grams": 500, "ebc": 15 } ],
-  "hops": [
-    { "name": "Hallertauer Tradition", "alpha": 5.5, "additions": [ { "minutes": 60, "grams": 20 }, { "minutes": 10, "grams": 10 } ] }
-  ],
-  "others": [ { "name": "Irish Moss", "additions": [ { "minutes": 5, "grams": 10 } ] } ]
-}
-```
-
-- `RCP-014` `[NEW]` (`Q-39`) The optional section `batch` describes the brew the recipe is for: an object with the
-  optional `liters` (the knockout volume: the wort at the end of the boil, a number > 0), `plato` (the target
-  original gravity in °Plato, a number from 0 to 40) and `final_plato` (the final gravity in °Plato, a number from 0
-  to 40; `Q-41`), no other key. The recipe editor uses them for the beer colour, the bitterness and the alcohol. It is
-  design information: the application checks it with the schema but does not use it, and a migration keeps it.
-
-```json
-"batch": { "liters": 20, "plato": 12.6, "final_plato": 2.5 }
-```
-
-- `RCP-015` `[NEW]` (`Q-40`) The optional section `water` holds the brewing-day water volumes in litres: an object
+- `RCP-014` `[NEW]` (`Q-39`, `Q-41`, `Q-51`) The figures of the brew the recipe is for: the target knockout volume
+  (the wort at the end of the boil) is `water.target_knockout_volume` (`RCP-015`), the target original gravity and
+  the final gravity are `fermentation.original_gravity` and `fermentation.final_gravity` (`RCP-017`). The recipe
+  editor uses them for the beer colour, the bitterness and the alcohol. (An earlier draft of version 3 kept them in
+  a section `batch`; it is invalid, `Q-51`.)
+- `RCP-015` `[NEW]` (`Q-40`, `Q-51`) The optional section `water` holds the brewing-day water volumes in litres: an object
   with the optional `mash` (mash water), `sparge` (sparge water, for rinsing the grain while lautering) and `top_up`
-  (top-up water, added after lautering to reach the original gravity), each a number ≥ 0, and the optional
+  (top-up water, added after lautering to reach the original gravity), each a number ≥ 0, the optional
+  `target_knockout_volume` (the knockout volume: the wort at the end of the boil, a number > 0; `RCP-014`), and the optional
   `treatment` (`Q-46`), the water treatment for the residual alkalinity: an object with the optional `alkalinity`
   (the tap water's residual alkalinity in °dH, a number), `carbonate_hardness` (the tap water's carbonate hardness in
   °dH, a number ≥ 0), `boil` (whether the mash water is boiled, a boolean; when it is `true`, `carbonate_hardness` is required, `Q-47`), `gypsum` (brewing gypsum in g per
   10 L, a number ≥ 0), `acid_malt` (acid malt in % of the grist, a number from 0 to 100) and `lactic_acid` (lactic
   acid 80 % in ml per 10 L, a number ≥ 0), no other key; no other key in `water`. It is
   design information: the application checks it with the schema but does not use it, and a migration keeps it.
+
+```json
+"water": { "mash": 16, "sparge": 14, "top_up": 2, "target_knockout_volume": 20, "treatment": { "alkalinity": 10.3, "acid_malt": 3 } }
+```
+
 - `RCP-016` `[NEW]` (`Q-44`) The optional `description` is the brewer's free text about the recipe: a string, which
   may span several lines (`\n`) and may be empty. It is design information: the application checks it with the
   schema but does not use it, and a migration keeps it.
-- `RCP-017` `[NEW]` (`Q-45`) The optional section `fermentation` holds the fermentation: an object with the optional
+- `RCP-017` `[NEW]` (`Q-45`, `Q-51`) The optional section `fermentation` holds the fermentation: an object with the optional
+  `original_gravity` (the target original gravity in °Plato, a number from 0 to 40) and `final_gravity` (the final
+  gravity in °Plato, a number from 0 to 40; `Q-41`) (`RCP-014`), the optional
   `yeast`, an object with its `name` (a non-empty string, required) and the optional `grams` (a number above 0,
   decimals allowed, e.g. a dry-yeast packet of 11.5 g), no other key; and the optional `co2`, the target carbonation
   in grams of CO₂ per litre of beer (a number above 0); no other key. It is design information: the application
   checks it with the schema but does not use it, and a migration keeps it.
-- `RCP-018` `[NEW]` (`Q-50`) The optional section `boil` holds what follows the boil: an object with the optional
-  `whirlpool`, a boolean (`true`: the brewer does a whirlpool after the boil; the recipe editor leaves `boil` out
-  otherwise); no other key. It is design information: the application checks it with the schema but does not use
+
+```json
+"fermentation": { "original_gravity": 12.6, "final_gravity": 2.5, "yeast": { "name": "WB-06", "grams": 11.5 }, "co2": 6.5 }
+```
+
+- `RCP-018` `[NEW]` (`Q-50`, `Q-51`) The optional section `boiling` holds the boil: an object with the optional
+  `whirlpool`, a boolean (`true`: the brewer does a whirlpool after the boil; the recipe editor leaves it out
+  otherwise), and the optional lists `hops` and `others` (`RCP-013`); no other key. The recipe editor writes them in
+  this order. It is design information: the application checks it with the schema but does not use
   it, and a migration keeps it.
 
 ```json
-"water": { "mash": 16, "sparge": 14, "top_up": 2 }
+"boiling": {
+  "whirlpool": true,
+  "hops": [
+    { "name": "Hallertauer Tradition", "alpha": 5.5, "additions": [ { "minutes": 60, "grams": 20 }, { "minutes": 10, "grams": 10 } ] }
+  ],
+  "others": [ { "name": "Irish Moss", "additions": [ { "minutes": 5, "grams": 10 } ] } ]
+}
 ```
 
 ### 7.2.1 Format version and migration `[NEW]` (`Q-33`)
@@ -158,7 +167,7 @@
 |---|---|---|---|
 | 1 | 2026-11-06 (`Q-31`, `Q-33`) | `name` and `mashing_process` with `goals`; `version` introduced | – (first version; a file without `version` is in version 1) |
 | 2 | 2026-11-06 (`Q-34`) | `mashing_process.goals` may be empty | `1 → 2`: no change but `version` (every version-1 recipe is valid in version 2) |
-| 3 | 2026-11-10 (`Q-37`..`Q-50`) | optional `description` (`RCP-016`), mashing plan `mashing` (`RCP-012`), `ingredients` (`RCP-013`), `batch` (`RCP-014`), `water` with its `treatment` (`RCP-015`), `boil` (`RCP-018`) and `fermentation` (`RCP-017`) | `2 → 3`: no change but `version` (every version-2 recipe is valid in version 3) |
+| 3 | 2026-11-10 (`Q-37`..`Q-51`) | optional `description` (`RCP-016`), `mashing` with the malts and the mashing plan `rests` (`RCP-012`, `RCP-013`), `boiling` with the whirlpool, hops and other additions (`RCP-018`, `RCP-013`), `water` with the target knockout volume and the `treatment` (`RCP-015`, `RCP-014`) and `fermentation` with the gravities (`RCP-017`, `RCP-014`) | `2 → 3`: no change but `version` (every version-2 recipe is valid in version 3) |
 
 ## 7.3 Goal definition format
 

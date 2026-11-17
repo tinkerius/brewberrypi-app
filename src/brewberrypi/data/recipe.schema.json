@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://brewberrypi.local/schemas/recipe.schema.json",
   "title": "BrewberryPi recipe file",
-  "description": "One recipe per file; the file name without .json is the recipe id (^[A-Za-z0-9_-]+$). The goals are in the section mashing_process (possibly empty, Q-34); mashing is the brewer's mashing plan, ingredients the malts, hops and other boil additions, batch the knockout volume and the original and final gravity, and water the brewing-day water volumes: design information the application does not use (Q-37..Q-42). version is the recipe file format version (RCP-008..011): this schema is the latest version; older versions are frozen as recipe.v<N>.schema.json. See docs/specification/07-recipes.md.",
+  "description": "One recipe per file; the file name without .json is the recipe id (^[A-Za-z0-9_-]+$). The goals are in the section mashing_process (possibly empty, Q-34); mashing holds the malts and the brewer's mashing plan (rests), boiling the whirlpool, the hops and the other boil additions, water the brewing-day water volumes, the target knockout volume and the water treatment, and fermentation the original and final gravity, the yeast and the carbonation: design information the application does not use (Q-37..Q-51). version is the recipe file format version (RCP-008..011): this schema is the latest version; older versions are frozen as recipe.v<N>.schema.json. See docs/specification/07-recipes.md.",
   "type": "object",
   "required": ["name", "mashing_process"],
   "properties": {
@@ -15,10 +15,8 @@
     },
     "mashing_process": { "$ref": "#/$defs/mashingProcess" },
     "mashing": { "$ref": "#/$defs/mashing" },
-    "ingredients": { "$ref": "#/$defs/ingredients" },
-    "batch": { "$ref": "#/$defs/batch" },
+    "boiling": { "$ref": "#/$defs/boiling" },
     "water": { "$ref": "#/$defs/water" },
-    "boil": { "$ref": "#/$defs/boil" },
     "fermentation": { "$ref": "#/$defs/fermentation" }
   },
   "additionalProperties": false,
@@ -32,7 +30,16 @@
       "additionalProperties": false
     },
     "mashing": {
-      "description": "The mashing plan (RCP-012, Q-37): the mash-in (MashIn, required in a non-empty plan, Q-48) and the rests the brewer plans, each at most once, keyed by rest id. Not used by the application.",
+      "description": "The mashing (RCP-012, Q-51): the malts and the mashing plan. Not used by the application.",
+      "type": "object",
+      "properties": {
+        "malts": { "description": "The malts in the brewer's order (RCP-013, Q-38).", "type": "array", "items": { "$ref": "#/$defs/malt" } },
+        "rests": { "$ref": "#/$defs/rests" }
+      },
+      "additionalProperties": false
+    },
+    "rests": {
+      "description": "The mashing plan (RCP-012, Q-37, Q-51): the mash-in (MashIn, required in a non-empty plan, Q-48) and the rests the brewer plans, each at most once, keyed by rest id.",
       "type": "object",
       "properties": {
         "MashIn": { "$ref": "#/$defs/mashIn" },
@@ -62,16 +69,6 @@
       "type": "object",
       "required": ["temperature", "minutes"],
       "properties": { "temperature": { "$ref": "#/$defs/temperature" }, "minutes": { "$ref": "#/$defs/minutes" } },
-      "additionalProperties": false
-    },
-    "ingredients": {
-      "description": "The brewer's ingredients (RCP-013, Q-38): malts and hops in the brewer's order. Not used by the application.",
-      "type": "object",
-      "properties": {
-        "malts": { "type": "array", "items": { "$ref": "#/$defs/malt" } },
-        "hops": { "type": "array", "items": { "$ref": "#/$defs/hop" } },
-        "others": { "description": "Other boil additions (Q-42).", "type": "array", "items": { "$ref": "#/$defs/other" } }
-      },
       "additionalProperties": false
     },
     "malt": {
@@ -119,18 +116,22 @@
       }
     },
     "grams": { "description": "Amount in grams.", "type": "integer", "minimum": 1 },
-    "boil": {
-      "description": "After the boil (RCP-018, Q-50): whether the brewer does a whirlpool. Not used by the application.",
+    "boiling": {
+      "description": "The boil (RCP-018, Q-50, Q-51): the whirlpool after the boil, the hops and the other boil additions. Not used by the application.",
       "type": "object",
       "properties": {
-        "whirlpool": { "description": "true: a whirlpool after the boil (the recipe editor leaves boil out otherwise).", "type": "boolean" }
+        "whirlpool": { "description": "true: a whirlpool after the boil (the recipe editor leaves it out otherwise).", "type": "boolean" },
+        "hops": { "description": "The hops in the brewer's order (RCP-013, Q-38).", "type": "array", "items": { "$ref": "#/$defs/hop" } },
+        "others": { "description": "Other boil additions (RCP-013, Q-42).", "type": "array", "items": { "$ref": "#/$defs/other" } }
       },
       "additionalProperties": false
     },
     "fermentation": {
-      "description": "The fermentation (RCP-017, Q-45): the yeast and the target carbonation. Not used by the application.",
+      "description": "The fermentation (RCP-017, Q-45, Q-51): the original and final gravity, the yeast and the target carbonation. Not used by the application.",
       "type": "object",
       "properties": {
+        "original_gravity": { "description": "Target original gravity (°P, Q-39).", "type": "number", "minimum": 0, "maximum": 40 },
+        "final_gravity": { "description": "Final gravity (°P, Q-41).", "type": "number", "minimum": 0, "maximum": 40 },
         "yeast": {
           "description": "The yeast: its name and, optionally, its amount in grams (decimals allowed, e.g. 11.5).",
           "type": "object",
@@ -150,12 +151,13 @@
       "additionalProperties": false
     },
     "water": {
-      "description": "The brewing-day water in litres (RCP-015, Q-40): mash, sparge and top-up water. Not used by the application.",
+      "description": "The brewing-day water in litres (RCP-015, Q-40, Q-51): mash, sparge and top-up water, the target knockout volume and the water treatment. Not used by the application.",
       "type": "object",
       "properties": {
         "mash": { "$ref": "#/$defs/liters" },
         "sparge": { "$ref": "#/$defs/liters" },
         "top_up": { "$ref": "#/$defs/liters" },
+        "target_knockout_volume": { "description": "The knockout volume: the wort at the end of the boil, in litres (Q-39, Q-51).", "type": "number", "exclusiveMinimum": 0 },
         "treatment": {
           "description": "The water treatment for the residual alkalinity (RCP-015, Q-46): the tap water and what is done to it. Not used by the application.",
           "type": "object",
@@ -175,16 +177,6 @@
       "additionalProperties": false
     },
     "liters": { "type": "number", "minimum": 0 },
-    "batch": {
-      "description": "The batch (RCP-014, Q-39, Q-41): knockout volume (wort at the end of the boil), original and final gravity. Not used by the application.",
-      "type": "object",
-      "properties": {
-        "liters": { "type": "number", "exclusiveMinimum": 0 },
-        "plato": { "description": "Target original gravity (°P).", "type": "number", "minimum": 0, "maximum": 40 },
-        "final_plato": { "description": "Final gravity (°P, Q-41).", "type": "number", "minimum": 0, "maximum": 40 }
-      },
-      "additionalProperties": false
-    },
     "temperature": { "type": "number", "minimum": 0, "maximum": 110 },
     "minutes": { "type": "integer", "minimum": 0 },
     "text": { "type": "string", "minLength": 1 },

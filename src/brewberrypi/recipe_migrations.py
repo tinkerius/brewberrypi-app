@@ -43,7 +43,7 @@ def _v1_to_v2(raw: RecipeData) -> RecipeData:
 
 
 def _v2_to_v3(raw: RecipeData) -> RecipeData:
-    """Version 3 adds the optional mashing plan `mashing` (Q-37, RCP-012); every version-2 recipe is valid."""
+    """Version 3 adds the optional design sections (Q-37..Q-51); every version-2 recipe is valid as it is."""
     return raw
 
 

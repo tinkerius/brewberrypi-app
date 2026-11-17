@@ -149,14 +149,13 @@ The list of goals may be empty, for a recipe that is not finished yet: it is lis
 ("has no goals").
 
 A recipe file may also hold the brewer's `description` (free text, possibly several lines, the recipe editor's
-Overview tab), the mashing plan, `mashing` (the rests planned for the mash, each with
-`temperature` and `minutes`, written by the recipe editor's Mashing tab), its `ingredients` (the lists
-`malts`, `hops` and `others`; a malt with `name`, `grams` and `ebc`, a hop with `name`, `alpha` and its
-`additions` of `minutes` and `grams`, another boil addition likewise without `alpha`) and
-its `batch` (`liters`, the knockout volume, `plato` and `final_plato`, the original and final gravity), written by the recipe editor's Malt and Hops tabs,
-its `water` (`mash`, `sparge` and `top_up` in litres, and the `treatment` for the residual alkalinity, the
-Water tab), its `boil` (`whirlpool`: a whirlpool after the boil, the Boiling tab) and its `fermentation` (the `yeast` with
-`name` and `grams`, and `co2`, the target carbonation in g/L, the Fermentation tab). The application checks
+Overview tab), its `mashing` (the `malts`, each with `name`, `grams` and `ebc`, and the mashing plan `rests`,
+the rests planned for the mash, each with `temperature` and `minutes`), its `boiling` (`whirlpool`: a whirlpool
+after the boil, the `hops`, each with `name`, `alpha` and its `additions` of `minutes` and `grams`, and the
+`others`, other boil additions likewise without `alpha`), its `water` (`mash`, `sparge` and `top_up` in litres,
+`target_knockout_volume`, the wort at the end of the boil, and the `treatment` for the residual alkalinity) and
+its `fermentation` (`original_gravity` and `final_gravity` in °P, the `yeast` with `name` and `grams`, and `co2`,
+the target carbonation in g/L), written by the recipe editor's tabs. The application checks
 them but does not use them: the goals alone are brewed.
 
 `version` is the version of the recipe file format (today 3; a file without it is in version 1). A
